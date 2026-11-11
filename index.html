@@ -1,0 +1,3615 @@
+<!doctype html>
+<html lang="zh-CN" class="story-boot">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10141b">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="公式研究：从最简单的增长开始。">
+  <meta name="author" content="编程-无">
+  <meta name="copyright" content="Copyright © 编程-无. 未经许可，禁止转载、修改或商用。">
+  <!-- 本站免费开放游玩，版权声明见“设置 > 关于”。 -->
+  <title>公式研究</title>
+  <!-- 启动页会话授权：新仓库独立部署，通过同源启动页写入授权。 -->
+  <script>
+  (() => {
+    'use strict';
+    const OFFICIAL_ORIGIN = 'https://starseacolin.github.io';
+    const LAUNCH_KEY = 'formula_lab_launch_v1';
+    const SESSION_KEY = 'formula_lab_session_v1';
+    const TICKET_LIFETIME_MS = 5 * 60 * 1000;
+    const GAME_PATH = '/Formula-Game/';
+
+    function normalizeGamePath(pathname) {
+      // 仅允许“公式研究”仓库的 Pages 路径；仓库名必须与 GitHub 完全一致。
+      return (pathname === GAME_PATH || pathname === GAME_PATH + 'index.html')
+        ? GAME_PATH : null;
+    }
+    function parseRecord(value) {
+      if (!value) return null;
+      try { return JSON.parse(value); } catch (_) { return null; }
+    }
+    function validRecord(record, targetPath) {
+      return !!record && record.version === 1 &&
+        record.state === 'authorized' && record.issuerPath === '/Oll/' &&
+        record.targetPath === targetPath;
+    }
+
+    let allowed = false;
+    try {
+      const targetPath = normalizeGamePath(location.pathname);
+      if (location.origin === OFFICIAL_ORIGIN && targetPath) {
+        const session = parseRecord(sessionStorage.getItem(SESSION_KEY));
+        if (validRecord(session, targetPath)) {
+          // 同一标签页已成功从启动页进入，允许刷新。
+          allowed = true;
+        } else {
+          const ticket = parseRecord(sessionStorage.getItem(LAUNCH_KEY));
+          const age = Date.now() - Number(ticket && ticket.issuedAt);
+          if (validRecord(ticket, targetPath) && Number.isFinite(age) &&
+              age >= 0 && age <= TICKET_LIFETIME_MS) {
+            allowed = true;
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+              version: 1, state: 'authorized', issuerPath: '/Oll/',
+              targetPath: targetPath
+            }));
+            sessionStorage.removeItem(LAUNCH_KEY);
+          }
+        }
+      }
+    } catch (_) {
+      // 无法读取会话存储时不启动游戏，避免绕过授权检查。
+      allowed = false;
+    }
+
+    Object.defineProperty(window, '__FORMULALAB_OFFICIAL_ALLOWED__', {
+      value: allowed, writable: false, configurable: false
+    });
+    if (!allowed) document.documentElement.classList.add('official-path-blocked');
+  })();
+  </script>
+  <style>
+    #official-path-warning { display: none !important; }
+    html.official-path-blocked,
+    html.official-path-blocked body {
+      margin: 0; min-height: 100%; background: #10141b !important;
+    }
+    html.official-path-blocked body > :not(#official-path-warning) {
+      display: none !important;
+    }
+    html.official-path-blocked #official-path-warning {
+      display: flex !important;
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      box-sizing: border-box;
+      color: #edf0f4;
+      background: #10141b;
+      font: 600 clamp(18px, 5vw, 25px) / 1.7 -apple-system, BlinkMacSystemFont, 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
+      letter-spacing: .02em;
+      text-align: center;
+      white-space: pre-wrap;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+  </style>
+  <style>html.story-boot,html.story-boot body{background:#10141b}html.story-boot .app-shell,html.story-intro .app-shell{display:none!important}html.story-boot #story-overlay{display:block!important;opacity:0}</style>
+  <style>
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+  line-height: 1.5;
+  --theme-duration: 240ms;
+  --theme-ease: cubic-bezier(.4,0,.2,1);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-height: 100dvh; color: var(--text); background: var(--bg);  }
+body, button { font-family: inherit; }
+button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, p { margin: 0; }
+[hidden] { display: none !important; }
+body[data-theme="dark"] {
+  --bg: #10141b; --surface: #191f29; --surface-subtle: #202833;
+  --border: #2c3541; --text: #edf0f4; --muted: #9eabb9;
+  --subtle: #82909f; --accent: #91d6c0; --accent-bg: rgba(145,214,192,.10);
+  --accent-border: rgba(145,214,192,.25); --nav-bg: rgba(16,20,27,.97);
+}
+body[data-theme="light"] {
+  --bg: #f6f7f9; --surface: #fff; --surface-subtle: #f1f5f6;
+  --border: #e0e6e9; --text: #1c2733; --muted: #667483;
+  --subtle: #7e8d9b; --accent: #207f6b; --accent-bg: rgba(32,127,107,.07);
+  --accent-border: rgba(32,127,107,.21); --nav-bg: rgba(246,247,249,.97);
+}
+.app-shell { min-height: 100dvh; }
+.side-nav { display: none; }
+.app-main { min-width: 0; }
+/* 顶栏：两项状态数据横向排列；进度条放在公式面板底部。 */
+.topbar {
+  display: flex; flex-direction: column; gap: 0;
+  min-height: 54px; padding: 12px 18px;
+  position: sticky; top: 0; z-index: 10;
+  background: var(--nav-bg); border-bottom: 1px solid var(--border);
+  /* 纯色导航背景避免安卓 WebView 首帧的模糊层合成负担。 */
+}
+.status-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-width: 0; width: 100%; }
+.status-item { display: flex; flex-direction: row; align-items: baseline; gap: 6px; min-width: 0; white-space: nowrap; }
+.status-currency { flex: 1 1 0; }
+.status-time { text-align: right; flex: 0 0 auto; justify-content: flex-end; }
+.status-label, .status-equals { color: var(--muted); font-size: 12px; line-height: 1.5; flex: none; }
+.status-number {
+  color: var(--text); font-size: 17px; line-height: 1.35; font-weight: 720;
+  font-variant-numeric: tabular-nums; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.status-time .status-number { color: var(--accent); }
+.tick-progress {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  width: 100%; height: 10px; overflow: hidden;
+  background: var(--surface-subtle); border-radius: 0;
+}
+.tick-progress-fill {
+  width: 100%; height: 100%; background: var(--accent); border-radius: 0;
+  transform: scaleX(0); transform-origin: left center;
+  will-change: transform; transition: none !important;
+}
+.math-var { font-family: Georgia, "Times New Roman", serif; font-style: italic; }
+.math-var sub { font-size: .54em; font-style: normal; vertical-align: -.35em; margin-left: .03em; }
+.content { width: 100%; max-width: 720px; margin: auto; padding: 28px 18px calc(104px + env(safe-area-inset-bottom)); }
+.page { display: none; }
+.page.is-visible { display: block; animation: page-in .18s cubic-bezier(.22,1,.36,1); }
+.page-title { font-size: 26px; font-weight: 710; line-height: 1.25; margin-bottom: 20px; text-align: center; }
+.formula-panel {
+  position: relative; overflow: hidden;
+  min-height: 191px; border: 1px solid var(--border); border-radius: 3px;
+  background: var(--surface); padding: 34px 12px 38px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+}
+.formula-label { color: var(--subtle); font-size: 11px; letter-spacing: .02em; }
+.formula-equation { margin: 20px 0 13px; font: clamp(29px, 8vw, 41px) Georgia, "Times New Roman", serif; line-height: 1.35; white-space: nowrap; }
+.formula-a { color: var(--accent); }
+.formula-param { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.formula-param strong { color: var(--text); font-weight: 650; }
+.upgrades { margin-top: 28px; }
+.section-head { margin-bottom: 12px; }
+.section-head h2 { font-size: 17px; font-weight: 690; }
+.upgrade-list { display: flex; flex-direction: column; gap: 9px; }
+.upgrade-row { min-height: 88px; display: flex; align-items: center; gap: 12px; padding: 13px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface);  }
+.upgrade-detail { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+.upgrade-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-width: 0; }
+.upgrade-heading strong { font-size: 13px; font-weight: 670; white-space: nowrap; }
+.upgrade-level { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.upgrade-effect { color: var(--text); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.buy-button { border: 1px solid var(--accent-border); border-radius: 3px; background: var(--accent-bg); color: var(--accent); padding: 7px 10px; min-width: 88px; min-height: 49px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;  }
+.buy-button span { font-size: 10px; }
+.buy-button strong { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.buy-button:active:not(:disabled) { transform: scale(.97); }
+.buy-button:disabled { cursor: default; border-color: var(--border); background: var(--surface-subtle); color: var(--subtle); opacity: .85; }
+.setting-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 78px; padding: 15px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface); }
+.setting-label strong { font-size: 14px; font-weight: 680; }
+.theme-options { flex: none; display: flex; gap: 3px; padding: 3px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface-subtle); }
+.theme-options button { border: none; border-radius: 2px; background: transparent; color: var(--muted); padding: 8px 13px; font-size: 12px;  }
+.theme-options button.is-active { background: var(--accent-bg); color: var(--accent); font-weight: 700; }
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; height: calc(66px + env(safe-area-inset-bottom)); padding: 7px 13px calc(7px + env(safe-area-inset-bottom)); display: flex; gap: 7px; background: var(--nav-bg); border-top: 1px solid var(--border); /* 移除毛玻璃以减轻启动和持续动画负担 */ }
+.bottom-button { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 9px; border: none; border-radius: 3px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 650;  }
+.bottom-button span { font: 22px Georgia, serif; }
+.bottom-button.is-active { background: var(--accent-bg); color: var(--accent); }
+.bottom-button:active { transform: scale(.98); }
+.reset-card { margin-top: 10px; }
+.reset-button, .dialog-cancel, .dialog-confirm {
+  min-height: 40px; padding: 8px 13px; font-size: 12px; font-weight: 650;
+  border-radius: 3px; border: 1px solid var(--border);
+  color: var(--text); background: var(--surface-subtle);
+}
+.reset-button { color: var(--text); }
+.reset-dialog {
+  width: min(360px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px);
+  margin: auto; padding: 22px; color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 3px;
+  box-shadow: 0 18px 60px rgba(0,0,0,.25);
+}
+.reset-dialog::backdrop { background: rgba(0,0,0,.55); }
+.reset-dialog h2 { font-size: 18px; font-weight: 700; margin: 0 0 12px; }
+.reset-dialog p { color: var(--muted); font-size: 13px; line-height: 1.7; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 24px; }
+.dialog-confirm { border-color: #a55353; background: #a55353; color: #fff; }
+/* 仅对实际需要换色的容器和控件过渡：避免所有子元素同步动画造成卡顿。 */
+body, .topbar, .side-nav, .bottom-nav, .formula-panel, .upgrade-row,
+.setting-card, .reset-dialog, .buy-button, .theme-options, .theme-options button,
+.bottom-button, .nav-button, .reset-button, .dialog-cancel, .dialog-confirm,
+.dialog-replay, .story-node-index, .story-node-title, .story-connector,
+.status-number, .status-label, .status-equals, .story-tree-note,
+.upgrade-level, .upgrade-effect, .tick-progress, .tick-progress-fill {
+  transition: background-color var(--theme-duration) var(--theme-ease),
+              border-color var(--theme-duration) var(--theme-ease),
+              color var(--theme-duration) var(--theme-ease);
+}
+.buy-button:active:not(:disabled), .bottom-button:active { transform: scale(.98); }
+@keyframes page-in { from { opacity: .65; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@media (min-width: 760px) {
+  .app-shell { display: grid; grid-template-columns: 190px minmax(0,1fr); }
+  .side-nav { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; padding: 35px 13px; background: var(--surface); border-right: 1px solid var(--border); }
+  .side-nav nav { display: flex; flex-direction: column; gap: 5px; }
+  .nav-button { display: flex; align-items: center; gap: 13px; min-height: 46px; padding: 0 13px; width: 100%; border: 0; border-radius: 3px; background: transparent; color: var(--muted); text-align: left; font-size: 13px; font-weight: 650; }
+  .nav-button.is-active { background: var(--accent-bg); color: var(--accent); }
+  .nav-icon { width: 20px; font: 22px Georgia, serif; text-align: center; }
+  .content { padding: 36px 36px 100px; }
+  .topbar { padding: 10px max(36px, calc((100vw - 190px - 720px)/2)); }
+  .formula-panel { min-height: 225px; }
+  .bottom-nav { display: none; }
+}
+@media (max-width: 350px) {
+  .topbar { padding: 12px 13px; }
+  .status-row { gap: 7px; }
+  .status-item { gap: 4px; }
+  .status-number { font-size: 15px; }
+  .status-label, .status-equals { font-size: 11px; }
+  .upgrade-effect { font-size: 11px; }
+  .upgrade-heading strong { font-size: 12px; }
+  .upgrade-level { font-size: 11px; }
+  .content { padding-left: 13px; padding-right: 13px; }
+  .formula-panel { min-height: 175px; }
+  .upgrade-row { gap: 10px; padding: 10px; }
+  .buy-button { min-width: 78px; padding: 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,*::before,*::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+
+/* v0.8：进度条是公式卡片内独立的矩形，不再贴住边框。 */
+.formula-panel { padding: 29px 18px 19px; }
+.tick-progress {
+  position: relative; left: auto; right: auto; bottom: auto;
+  align-self: stretch; width: 100%; height: 12px; flex: none;
+  margin-top: 22px; overflow: hidden;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border); border-radius: 1px;
+}
+.tick-progress-fill { border-radius: 0; }
+
+/* 剧情树：两个真实节点由一根精确对齐的竖线连接，不绘制悬空枝条。 */
+.page-story.is-visible { display: flex; flex-direction: column; min-height: calc(100dvh - 194px); }
+.story-tree-note { text-align: center; color: var(--subtle); font-size: 12px; margin-top: -8px; }
+.story-tree { display: flex; flex: 1; justify-content: center; align-items: flex-end; min-height: 330px; width: 100%; max-width: 530px; margin: 0 auto; padding-bottom: 12px; }
+.story-track { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.story-tree-node {
+  position: relative; display: flex; justify-content: center; align-items: center;
+  width: 50px; height: 50px; padding: 0; border: 0;
+  background: transparent; color: var(--text);
+}
+.story-node-index {
+  width: 50px; height: 50px; display: grid; place-items: center;
+  background: var(--accent-bg); border: 1px solid var(--accent-border);
+  border-radius: 2px; color: var(--accent); font: 650 19px Georgia,serif;
+}
+.story-node-title {
+  position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%);
+  font-size: 14px; font-weight: 650; white-space: nowrap;
+}
+.story-connector { display: block; height: 100px; width: 1px; flex: none; background: var(--accent-border); }
+.story-tree-node.is-locked .story-node-index {
+  color: var(--subtle); border-color: var(--border); background: var(--surface-subtle);
+}
+.story-tree-node.is-locked .story-node-title { color: var(--subtle); }
+.story-tree-node:active .story-node-index { transform: scale(.97); }
+.story-info-number { color: var(--accent); font-size: 12px; margin-bottom: 8px; }
+.dialog-replay {
+  min-height: 40px; padding: 8px 14px; font-size: 12px; font-weight: 680;
+  color: var(--accent); border: 1px solid var(--accent-border);
+  border-radius: 3px; background: var(--accent-bg);
+}
+
+/* 剧情覆盖层：始终淡入纯黑，结束时整层淡出，避免突然切屏。 */
+.story-overlay {
+  position: fixed; inset: 0; z-index: 100; background: #000;
+  opacity: 0;
+  transition: opacity 1000ms cubic-bezier(.4,0,.2,1) !important;
+  will-change: opacity; isolation: isolate;
+}
+.story-overlay.is-visible { opacity: 1; }
+.story-stage {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 100%; height: 100%; height: 100dvh;
+  background: transparent; border: 0; color: #f3f5f7;
+  padding: max(25px, env(safe-area-inset-top)) 14px max(40px, env(safe-area-inset-bottom));
+  touch-action: manipulation; outline-offset: -4px;
+}
+.story-lines { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(20px, 4.5vh, 36px); width: 100%; max-width: 640px; }
+.story-line {
+  display: block; width: 100%; text-align: center; white-space: nowrap;
+  font-size: clamp(13px, 3.9vw, 18px); line-height: 1.5; letter-spacing: .015em;
+  font-weight: 460; opacity: 0;
+  transition: opacity 850ms cubic-bezier(.4,0,.2,1) !important;
+}
+.story-line.is-revealed { opacity: 1; }
+.story-line:last-child { color: #a5dfcc; font: italic clamp(18px, 5vw, 24px) Georgia,serif; }
+.story-tip {
+  position: absolute; bottom: max(54px, calc(28px + env(safe-area-inset-bottom)));
+  left: 0; right: 0; color: #9da8b3; font-size: 11px; letter-spacing: .03em;
+  text-align: center;
+}
+@media (min-width: 760px) {
+  .page-story.is-visible { min-height: calc(100dvh - 210px); }
+}
+@media (max-width: 350px) {
+  .story-line { font-size: 12px; letter-spacing: 0; }
+  .story-tree { min-height: 330px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .story-overlay, .story-line { transition: none !important; }
+}
+
+/* v1.1：解锁前导航项彻底隐藏，解锁后四项均分底栏。 */
+.improve-empty {
+  margin: 24px auto; padding: 24px 16px; max-width: 440px;
+  border: 1px solid var(--border); border-radius: 2px;
+  color: var(--muted); background: var(--surface); text-align: center; font-size: 13px;
+}
+.story-line strong { font-weight: 800; }
+.story-line.story-unlock-line, .story-line.story-unlock-line:last-child {
+  color: #a5dfcc; font-family: inherit; font-size: clamp(14px, 4vw, 19px);
+  font-style: normal; font-weight: 500;
+}
+.improve-empty { transition: color var(--theme-duration) var(--theme-ease), background-color var(--theme-duration) var(--theme-ease), border-color var(--theme-duration) var(--theme-ease); }
+
+/* v1.2 · 每个公式单独的改进系统。 */
+.improve-panel {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 16px; padding: 28px 18px 24px;
+  border: 1px solid var(--border); border-radius: 2px; background: var(--surface);
+}
+.improve-caption { color: var(--subtle); font-size: 12px; }
+.improve-balance {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline;
+  gap: 9px; font-size: 26px; font-variant-numeric: tabular-nums;
+}
+.improve-balance strong { font-weight: 710; overflow-wrap: anywhere; }
+.improve-rule { font-size: 13px; color: var(--muted); }
+.improve-preview { font-size: 14px; color: var(--text); }
+.improve-preview strong { color: var(--accent); font-variant-numeric: tabular-nums; }
+.improve-action {
+  width: min(100%, 260px); min-height: 46px; border-radius: 2px;
+  border: 1px solid var(--accent-border); background: var(--accent-bg);
+  color: var(--accent); font-size: 14px; font-weight: 700;
+}
+.improve-action:disabled {
+  color: var(--subtle); background: var(--surface-subtle);
+  border-color: var(--border); cursor: default;
+}
+.improve-action:active:not(:disabled) { transform: scale(.985); }
+.improve-reset-note { max-width: 360px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.improve-math {
+  margin-top: 12px; padding: 13px 12px; color: var(--muted);
+  font-size: 12px; text-align: center; line-height: 1.9;
+}
+.improve-math-expression { color: var(--text); overflow-wrap: anywhere; }
+.improve-panel, .improve-action {
+  transition: background-color var(--theme-duration) var(--theme-ease),
+              border-color var(--theme-duration) var(--theme-ease),
+              color var(--theme-duration) var(--theme-ease);
+}
+/* 在窄屏中保持四个导航标签的图标和名称同行。 */
+.bottom-button { white-space: nowrap; gap: 5px; padding: 0 2px; }
+@media (max-width: 350px) {
+  .bottom-nav { padding-left: 7px; padding-right: 7px; gap: 2px; }
+  .bottom-button { font-size: 12px; gap: 4px; }
+  .bottom-button span { font-size: 19px; }
+}
+
+
+/* v1.3：资源条同时展示 x₁、p₁、时刻，任何变量都不折行。 */
+.status-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) max-content; gap: 10px; }
+.status-currency, .status-improve { min-width: 0; overflow: hidden; }
+.status-item { gap: 5px; }
+.status-number { font-size: 15px; }
+.status-time { white-space: nowrap; }
+@media (max-width: 350px) {
+  .status-row { gap: 6px; }
+  .status-number { font-size: 14px; }
+  .status-label, .status-equals { font-size: 11px; }
+  .status-item { gap: 3px; }
+}
+
+/* 剧情：从画面上部开始出现第一行，后续逐行向下自然排列。 */
+.story-stage { justify-content: flex-start; }
+.story-lines { justify-content: flex-start; margin-top: clamp(75px, 14dvh, 155px); }
+@media (max-height: 600px) {
+  .story-lines { margin-top: 42px; gap: 15px; }
+  .story-line { font-size: clamp(12px, 3.4vw, 16px); }
+}
+
+/* 轻量长按预览：只渐变透明度，不进行会造成文字跳动的尺寸动画。 */
+.info-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; min-height: 34px; }
+.info-head > h1, .info-head > h2 { grid-column: 1; margin: 0; text-align: left; }
+.info-head > h1 { font-size: 22px; font-weight: 710; }
+.info-head > .formula-help { grid-column: 2; justify-self: center; }
+.formula-help {
+  width: 26px; height: 26px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--accent-border); background: var(--accent-bg);
+  color: var(--accent); display: grid; place-items: center;
+  font: 700 13px Georgia,serif; line-height: 1;
+  user-select: none; -webkit-user-select: none; touch-action: none;
+  -webkit-touch-callout: none;
+  transition: background-color var(--theme-duration) var(--theme-ease),
+              color var(--theme-duration) var(--theme-ease),
+              border-color var(--theme-duration) var(--theme-ease);
+}
+.formula-help:active { background: var(--accent-border); }
+.mode-swap { display: grid; }
+.mode-normal, .mode-formula {
+  grid-area: 1 / 1;
+  transition: opacity 240ms ease-in-out;
+  min-width: 0;
+}
+.mode-normal { opacity: 1; visibility: visible; }
+.mode-formula { opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 240ms ease-in-out, visibility 0s linear 240ms; }
+.mode-swap.is-formula-mode > .mode-normal { opacity: 0; pointer-events: none; visibility: hidden; transition: opacity 240ms ease-in-out, visibility 0s linear 240ms; }
+.mode-swap.is-formula-mode > .mode-formula { opacity: 1; visibility: visible; transition: opacity 240ms ease-in-out; }
+.formula-row {
+  flex-direction: column; align-items: flex-start; justify-content: center;
+  gap: 6px; min-height: 88px;
+}
+.formula-row-title { font-size: 13px; font-weight: 670; }
+.formula-row-math { font-size: 13px; color: var(--accent); white-space: nowrap; }
+.power-expression { font-family: Georgia, 'Times New Roman', serif; }
+.power-expression > sup { font-size: .78em; white-space: nowrap; vertical-align: super; }
+.power-expression > sup > sup { font-size: .76em; }
+.improve-head { margin-bottom: 14px; }
+.improve-simple { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.improve-action { width: 100%; max-width: none; min-height: 52px; }
+.improve-reset-note { text-align: center; max-width: none; }
+.improve-formula {
+  min-height: 92px; border: 1px solid var(--border); border-radius: 2px;
+  background: var(--surface); display: flex; align-items: center; justify-content: center;
+  padding: 18px 10px;
+}
+.conversion-math { font-size: clamp(11px, 3.4vw, 15px); text-align: center; color: var(--accent); white-space: nowrap; }
+.conversion-math sup { font-size: .77em; }
+@media (max-width: 350px) {
+  .formula-row-math { font-size: 11px; }
+  .conversion-math { font-size: 10.4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mode-normal, .mode-formula { transition: none !important; }
+}
+
+
+/* v1.4：尚未完整观看剧情 2 时，资源栏不显示 p₁；显示时弹性分配空间。 */
+.status-row { display: flex; gap: 8px; justify-content: space-between; }
+.status-currency, .status-improve { flex: 1 1 0; min-width: 0; }
+.status-time { flex: 0 0 auto; }
+.status-improve[hidden] { display: none !important; }
+
+/* v1.4：整个奖励公式保持一行；按实际可用宽度等比例缩放字符，不断行、不裁切。 */
+.conversion-math {
+  display: flex; flex-direction: row; align-items: center; justify-content: center;
+  width: 100%; min-width: 0; overflow: hidden; gap: 0;
+  font-size: 16px; white-space: nowrap;
+}
+.conversion-formula {
+  display: inline-block; width: max-content; max-width: none; white-space: nowrap;
+  flex: none; transform-origin: center center;
+  font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans CJK SC', 'Microsoft YaHei', sans-serif;
+  font-size: 16px; line-height: 1.8;
+}
+.conversion-formula sup { font-size: .76em; }
+.conversion-formula sup sup { font-size: .74em; }
+.conversion-formula sub { font-size: .68em; }
+
+/* v1.5：首次改进后的 b 升级，延续既有布局与操作层级。 */
+.formula-b { color: var(--accent); }
+.improve-upgrades { margin-top: 28px; }
+.improve-upgrades .section-head h2 { font-size: 17px; font-weight: 690; }
+.improve-action { display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 0; padding: 9px 6px; white-space: nowrap; }
+.improve-action .math-var { margin-left: .05em; }
+@media (max-width: 350px) { .improve-action { font-size: 13px; } }
+
+
+/* v1.6：未知剧情仅显示问号；仍保留原有的数值触发条件。 */
+.story-tree-node.is-unknown .story-node-index { background: var(--surface-subtle); border-color: var(--border); color: var(--subtle); }
+.story-tree-node.is-unknown .story-node-title { color: var(--muted); }
+
+/* 剧情树在自己的窗口中双向拖动，边界由脚本控制，不引发整页无限滚动。 */
+.page-story.is-visible { min-height: 0; }
+.story-tree {
+  display: block; position: relative; overflow: hidden;
+  width: 100%; max-width: 530px;
+  height: clamp(360px, calc(100dvh - 225px), 740px);
+  min-height: 0; flex: none; margin: 6px auto 0; padding: 0;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  overscroll-behavior: contain;
+}
+.story-track {
+  position: absolute; left: 0; bottom: 16px; width: 100%;
+  transform: translate3d(0,0,0); will-change: transform;
+}
+.story-tree-node { touch-action: none; }
+.story-tree:focus-visible { outline: 1px solid var(--accent-border); outline-offset: -1px; }
+
+/* 公式点击：圆形波纹只在框内变化，不移动文字或整体布局。 */
+.formula-panel { cursor: pointer; touch-action: manipulation; isolation: isolate; }
+.formula-panel:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.formula-tap-pulse {
+  position: absolute; width: 70px; height: 70px;
+  margin-left: -35px; margin-top: -35px; pointer-events: none;
+  background: var(--accent); opacity: 0; border-radius: 50%; z-index: 2;
+  animation: formula-tap-ripple 440ms ease-out forwards;
+}
+@keyframes formula-tap-ripple {
+  0% { transform: scale(.15); opacity: .22; }
+  100% { transform: scale(3.0); opacity: 0; }
+}
+
+/* 剧情介绍：对话框与背景同时淡入淡出，不影响其他确认弹窗。 */
+.story-info-dialog {
+  opacity: 0; transform: translateY(8px) scale(.99);
+  transition: opacity 240ms cubic-bezier(.22,1,.36,1),
+              transform 240ms cubic-bezier(.22,1,.36,1),
+              background-color var(--theme-duration) var(--theme-ease),
+              color var(--theme-duration) var(--theme-ease),
+              border-color var(--theme-duration) var(--theme-ease);
+}
+.story-info-dialog.is-open { opacity: 1; transform: translateY(0) scale(1); }
+.story-info-dialog::backdrop { background: rgba(0,0,0,0); transition: background-color 240ms ease; }
+.story-info-dialog.is-open::backdrop { background: rgba(0,0,0,.55); }
+@media (prefers-reduced-motion: reduce) {
+  .formula-tap-pulse { animation-duration: 1ms; }
+  .story-info-dialog, .story-info-dialog::backdrop { transition-duration: 1ms; }
+}
+
+/* v1.7：使用无衬线 ASCII 问号与绝对居中绘制，消除全角字形在部分安卓字体中的视觉偏移。 */
+.story-tree-node.is-unknown .story-node-index {
+  position: relative;
+  font-size: 0;
+  line-height: 1;
+  text-align: center;
+}
+.story-tree-node.is-unknown .story-node-index::after {
+  content: '?';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 600 23px/1 Arial, 'Noto Sans', sans-serif;
+  letter-spacing: 0;
+  text-indent: 0;
+  pointer-events: none;
+}
+/* 第四个节点使剧情树更高：可拖动到顶端，拖动范围仍由内容高度决定。 */
+.meta-empty { margin-top: 30px; text-align: center; color: var(--muted); font-size: 13px; }
+/* 新解锁页复用既有无衬线 UI；底栏保持一行并可适应第五个标签。 */
+.bottom-nav .bottom-button { min-width: 0; white-space: nowrap; }
+@media (max-width: 350px) {
+  .bottom-nav .bottom-button { font-size: 11px; gap: 3px; }
+  .bottom-nav .bottom-button span { font-size: 16px; }
+}
+
+/* v1.8：元货币独立资源条，默认仅在剧情 4 解锁「元」后出现。 */
+body[data-theme="dark"] { --meta-accent: #d9bbff; --meta-accent-bg: rgba(217,187,255,.09); }
+body[data-theme="light"] { --meta-accent: #7843ae; --meta-accent-bg: rgba(120,67,174,.065); }
+.meta-accent, .psi-symbol { color: var(--meta-accent) !important; }
+.psi-strip {
+  width: 100%; min-width: 0; min-height: 29px; display: flex; align-items: center; justify-content: center;
+  gap: 7px; border-bottom: 1px solid var(--border); margin: -4px 0 8px;
+  padding: 1px 2px 5px; white-space: nowrap;
+}
+.psi-symbol { font: 700 17px Georgia, serif; }
+.psi-equals { color: var(--muted); font-size: 12px; }
+.psi-number { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 15px; line-height: 1.3; font-weight: 700; font-variant-numeric: tabular-nums; }
+.meta-head { margin-bottom: 12px; }
+.meta-head h1 { color: var(--meta-accent); }
+.meta-head .meta-help-button { border-color: var(--meta-accent); background: var(--meta-accent-bg); color: var(--meta-accent); }
+.meta-help-dialog .psi-equation {
+  margin-top: 14px; font: 500 18px Georgia, serif; color: var(--meta-accent); text-align: center;
+  white-space: nowrap; overflow-x: auto; padding: 4px 0;
+}
+.story-line.story-meta-unlock { color: #d9bbff !important; font-weight: 700; }
+body[data-theme="light"] .story-line.story-meta-unlock { color: #d9bbff !important; }
+.bottom-button .meta-accent { transition: color var(--theme-duration) var(--theme-ease); }
+.meta-accent, .psi-symbol, .meta-help-button, .psi-number {
+  transition: color var(--theme-duration) var(--theme-ease), border-color var(--theme-duration) var(--theme-ease), background-color var(--theme-duration) var(--theme-ease);
+}
+@media (max-width: 350px) {
+  .psi-strip { min-height: 26px; margin-bottom: 6px; }
+  .psi-number { font-size: 14px; }
+}
+
+/* v1.9：元导航的文字与其他底栏标签使用同一字号、基线。 */
+.bottom-nav .bottom-button .meta-nav-label {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+}
+.side-nav .nav-button .meta-nav-label {
+  font: inherit;
+  line-height: inherit;
+}
+/* 元子页面：只承载已确认的两类功能，暂无对应玩法时保持空状态。 */
+.meta-tabs {
+  display: grid; grid-template-columns: repeat(2,minmax(0,1fr));
+  border: 1px solid var(--border); background: var(--surface);
+  padding: 3px; gap: 3px; border-radius: 2px;
+}
+.meta-tab {
+  min-height: 43px; border: 1px solid transparent; border-radius: 2px;
+  background: transparent; color: var(--muted); font-size: 13px; font-weight: 650;
+  transition: background-color var(--theme-duration) var(--theme-ease),
+    border-color var(--theme-duration) var(--theme-ease),
+    color var(--theme-duration) var(--theme-ease);
+}
+.meta-tab.is-active { color: var(--meta-accent); background: var(--meta-accent-bg); border-color: var(--border); }
+.meta-tab-panel { min-height: 130px; display: flex; align-items: flex-start; justify-content: center; }
+.meta-tab-panel .meta-empty { margin-top: 44px; }
+
+/* v2.0：克制的开发者选项，不影响普通页面的信息密度。 */
+.developer-main-card { margin-top: 10px; }
+.developer-options { display: flex; flex-direction: column; gap: 8px; padding: 9px 0 0 12px; }
+.developer-option-row { min-height: 64px; padding: 10px 13px; }
+.setting-toggle {
+  min-width: 64px; min-height: 36px; padding: 7px 13px;
+  border: 1px solid var(--border); border-radius: 2px;
+  background: var(--surface-subtle); color: var(--muted);
+  font-size: 12px; font-weight: 650;
+  transition: background-color var(--theme-duration) var(--theme-ease),
+              border-color var(--theme-duration) var(--theme-ease),
+              color var(--theme-duration) var(--theme-ease);
+}
+.setting-toggle[aria-pressed="true"] { border-color: var(--accent-border); color: var(--accent); background: var(--accent-bg); }
+.developer-details { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding: 10px 14px; border: 1px solid var(--border); background: var(--surface); border-radius: 2px; color: var(--muted); font-size: 12px; }
+.developer-details strong { color: var(--text); font-variant-numeric: tabular-nums; }
+/* 元 → 解锁：已拥有的第一个公式节点。 */
+.meta-unlock-nodes { display: flex; justify-content: center; align-items: flex-start; width: 100%; padding: 28px 12px 12px; }
+.meta-formula-node {
+  display: grid; place-items: center; width: 62px; height: 62px;
+  border: 1px solid var(--meta-accent); border-radius: 2px;
+  color: var(--meta-accent); background: var(--meta-accent-bg);
+  font-size: 18px; font-weight: 700;
+  transition: background-color var(--theme-duration) var(--theme-ease),
+              border-color var(--theme-duration) var(--theme-ease),
+              color var(--theme-duration) var(--theme-ease), transform .18s ease;
+}
+.meta-formula-node:active { transform: scale(.96); }
+.meta-formula-dialog .meta-formula-description { margin-top: 8px; }
+.meta-formula-dialog .meta-formula-current {
+  color: var(--text); font: 500 clamp(20px, 6vw, 26px)/1.5 Georgia, "Times New Roman", serif;
+  text-align: center; margin: 16px 0 4px; white-space: nowrap;
+}
+
+/* v2.1：元页面的三个公式节点，使用淡紫色描边区分公式的运行状态。 */
+.meta-tab-panel { width: 100%; }
+.meta-unlock-nodes {
+  width: 100%; padding: 20px 12px 28px; display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-start; gap: 0;
+}
+.meta-formula-node {
+  width: 78px; height: 66px; flex: 0 0 66px; position: relative;
+  background: var(--surface); color: var(--muted); border-color: var(--border);
+  font-size: 20px; will-change: auto;
+}
+.meta-formula-connector { width: 2px; height: 25px; flex: 0 0 25px; background: var(--border); }
+.meta-formula-node.is-owned { color: var(--meta-accent); border-color: var(--meta-accent); background: var(--meta-accent-bg); }
+.meta-formula-node.is-running {
+  color: var(--meta-accent); border-color: var(--meta-accent); background: var(--meta-accent-bg);
+  box-shadow: 0 0 0 2px var(--meta-accent-bg), 0 0 18px var(--meta-accent-bg);
+  transform: scale(1.045);
+}
+.meta-formula-node.is-running::after {
+  content: ''; position: absolute; bottom: 6px; left: calc(50% - 3px);
+  width: 6px; height: 6px; border-radius: 50%; background: var(--meta-accent);
+}
+.meta-formula-node.is-running:active { transform: scale(1.015); }
+.meta-formula-node.is-locked { background: var(--surface-subtle); color: var(--subtle); }
+.meta-formula-unlock-hint { text-align: center; margin-top: 10px; }
+.meta-formula-current { overflow-x: auto; max-width: 100%; }
+.other-formula-note { margin: 18px auto; }
+@media (max-width: 350px) {
+  .formula-equation { font-size: 29px; letter-spacing: -.045em; }
+}
+
+/* v2.2：公式 2 与公式 3 并列，两条分支只连接公式 1，不彼此连接。 */
+.meta-unlock-nodes { align-items: center; }
+.meta-branch-pair {
+  display: flex; width: min(236px, 100%); justify-content: space-between; align-items: center;
+}
+/* 两条斜线分别从公式 2 和 3 指向公式 1；上方节点之间没有连线。 */
+.meta-branch-edges {
+  display: block; width: min(236px, 100%); height: 64px; flex: none;
+  overflow: visible; stroke: var(--border); fill: none; stroke-width: 2;
+  stroke-linecap: square;
+}
+
+/* v2.4：剧情 6 的首次触发说明，红色与深浅色主题均保持清晰对比。 */
+.story-line.story-softcap-unlock,
+.story-line.story-softcap-unlock:last-child {
+  color: #ff777d !important;
+  font-family: inherit;
+  font-size: clamp(14px, 4vw, 19px);
+  font-style: normal;
+  font-weight: 700;
+}
+
+/* v2.5：软上限作为公式的红色修正项，不与绿色变量混淆。 */
+.formula-equation.has-softcap {
+  max-width: 100%;
+  margin-top: 14px; margin-bottom: 13px;
+  font-size: clamp(15px, 4.3vw, 24px);
+  white-space: normal;
+  line-height: 1.9;
+}
+.softcap-term { color: #f16c75; display: inline-block; white-space: nowrap; }
+.softcap-term sup { font-size: .66em; vertical-align: .65em; }
+.softcap-term sub { font-size: .75em; }
+.meta-formula-current.has-softcap { color: #f16c75; }
+/* 减少进度条常驻合成层的额外内存消耗，维持只变化 transform。 */
+.tick-progress-fill { backface-visibility: hidden; }
+
+/* v2.7：三号公式从 1-4 单独分叉，不和二号公式的剧情直接连接。 */
+.story-branch-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(220px, 100%);
+  align-items: end;
+  justify-items: center;
+}
+.story-branch-column {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+.story-branch-right { align-self: end; }
+.story-fork-connectors {
+  display: block;
+  width: min(220px, 100%);
+  height: 60px;
+  flex: none;
+  overflow: visible;
+  stroke: var(--accent-border);
+  stroke-width: 1.2;
+  fill: none;
+}
+/* 左侧分支标题朝外，避免两条分支的名称交叠。 */
+.story-branch-left .story-node-title { left: auto; right: calc(100% + 9px); }
+.story-branch-right .story-node-title { left: calc(100% + 9px); right: auto; }
+/* 1-1 到 3-1 使用同一字号，较长编号可缩小但节点尺寸不变。 */
+.story-node-index { font-size: 15px; font-variant-numeric: tabular-nums; }
+/* 首次载入剧情时跳过不可见页面的 CSS 入场动画。 */
+html.story-intro .page.is-visible, html.story-boot .page.is-visible { animation: none; }
+
+
+/* v2.8：统一子页面与普通提示弹窗的进入/退出动画，只动画合成属性。 */
+.content { position: relative; }
+.page.is-exiting {
+  display: block; position: absolute; top: 0; left: 0; right: 0;
+  pointer-events: none; animation: page-out .16s ease-in forwards;
+}
+@keyframes page-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-4px); }
+}
+.reset-dialog.ui-animated-dialog {
+  opacity: 0; transform: translateY(8px) scale(.99);
+  transition: opacity 240ms cubic-bezier(.22,1,.36,1),
+    transform 240ms cubic-bezier(.22,1,.36,1),
+    background-color var(--theme-duration) var(--theme-ease),
+    border-color var(--theme-duration) var(--theme-ease),
+    color var(--theme-duration) var(--theme-ease);
+}
+.reset-dialog.ui-animated-dialog.is-open {
+  opacity: 1; transform: translateY(0) scale(1);
+}
+.reset-dialog.ui-animated-dialog::backdrop {
+  background: rgba(0,0,0,0);
+  transition: background-color 240ms ease;
+}
+.reset-dialog.ui-animated-dialog.is-open::backdrop { background: rgba(0,0,0,.55); }
+@media (prefers-reduced-motion: reduce) {
+  .page.is-visible, .page.is-exiting { animation-duration: 1ms; }
+  .reset-dialog.ui-animated-dialog,
+  .reset-dialog.ui-animated-dialog::backdrop { transition-duration: 1ms; }
+}
+
+/* v2.9：统一公式字符间距。操作符由 flex gap 对齐，不依赖空格宽度。 */
+.formula-equation,
+.meta-formula-dialog .meta-formula-current {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  column-gap: .24em;
+  row-gap: .18em;
+  letter-spacing: 0;
+  white-space: normal;
+  max-width: 100%;
+}
+.formula-equation .eq-term,
+.meta-formula-current .eq-term { display: inline-block; white-space: nowrap; }
+.formula-equation .eq-op,
+.meta-formula-current .eq-op { display: inline-block; font-style: normal; font-weight: 400; }
+.formula-equation .eq-softcap,
+.meta-formula-current .eq-softcap {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: .24em;
+  align-items: baseline;
+  white-space: nowrap;
+  color: #f16c75;
+}
+.meta-formula-dialog .meta-formula-current {
+  overflow-x: visible;
+  margin-inline: auto;
+  font-size: clamp(14px, 4vw, 23px);
+  line-height: 1.75;
+}
+.formula-equation.has-softcap { line-height: 1.8; }
+/* v3.0：清晰的双层描边波纹。只动画合成属性，不对公式框背景施加闪光。 */
+.formula-panel { -webkit-tap-highlight-color: transparent; user-select: none; }
+.formula-tap-pulse {
+  width: 82px; height: 82px; margin-left: -41px; margin-top: -41px;
+  background: transparent;
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--accent-border), 0 0 13px var(--accent-border);
+  opacity: 0;
+  will-change: opacity, transform;
+  animation: formula-tap-outline 550ms cubic-bezier(.16, .76, .25, 1) forwards;
+}
+.formula-tap-pulse::after {
+  content: ''; position: absolute; inset: 9px;
+  border: 1px solid var(--accent); border-radius: 50%;
+  opacity: .48;
+}
+@keyframes formula-tap-outline {
+  0% { transform: scale(.18); opacity: .74; }
+  45% { opacity: .48; }
+  100% { transform: scale(3.1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .formula-tap-pulse { animation-duration: 1ms; }
+}
+/* 元节点详情只将“÷”及分母标红，公式其他部分维持正常文字色。 */
+.meta-formula-current.has-softcap { color: var(--text); }
+
+
+/* v3.0：路由横向滑动。双页面共享同一 grid area，同时移动，不闪屏。 */
+.content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow-x: clip;
+}
+.content > .page {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+.page.is-visible { display: block; animation: none; }
+.page.is-exiting {
+  display: block;
+  position: static;
+  inset: auto;
+  pointer-events: none;
+}
+.page.is-entering, .page.is-exiting {
+  will-change: transform, opacity;
+  animation-duration: 320ms;
+  animation-timing-function: cubic-bezier(.22, .72, .18, 1);
+  animation-fill-mode: both;
+}
+.page.is-entering { z-index: 2; }
+.page.is-exiting { z-index: 1; }
+.page.is-entering[data-slide-dir="forward"] { animation-name: route-enter-forward; }
+.page.is-exiting[data-slide-dir="forward"] { animation-name: route-exit-forward; }
+.page.is-entering[data-slide-dir="backward"] { animation-name: route-enter-backward; }
+.page.is-exiting[data-slide-dir="backward"] { animation-name: route-exit-backward; }
+@keyframes route-enter-forward {
+  from { transform: translate3d(100%, 0, 0); opacity: .6; }
+  to { transform: translate3d(0, 0, 0); opacity: 1; }
+}
+@keyframes route-exit-forward {
+  from { transform: translate3d(0, 0, 0); opacity: 1; }
+  to { transform: translate3d(-30%, 0, 0); opacity: .15; }
+}
+@keyframes route-enter-backward {
+  from { transform: translate3d(-100%, 0, 0); opacity: .6; }
+  to { transform: translate3d(0, 0, 0); opacity: 1; }
+}
+@keyframes route-exit-backward {
+  from { transform: translate3d(0, 0, 0); opacity: 1; }
+  to { transform: translate3d(30%, 0, 0); opacity: .15; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page.is-entering, .page.is-exiting { animation: none !important; }
+}
+
+/* v3.1：无明显颜色的折射型圆形波纹。仅用透明度和 transform，卡片裁剪到边缘。 */
+.formula-tap-pulse {
+  width: var(--ripple-size, 320px);
+  height: var(--ripple-size, 320px);
+  margin: 0;
+  transform: translate(-50%, -50%) scale(.008);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  opacity: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 3;
+  will-change: transform, opacity;
+  animation: formula-refractive-wave 760ms cubic-bezier(.12,.62,.26,1) forwards;
+}
+.formula-tap-pulse::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(164, 194, 212, .19);
+  background: radial-gradient(circle at 50% 50%,
+      transparent 91%, rgba(224,241,250,.045) 95%,
+      rgba(18,34,47,.10) 97%, transparent 100%);
+  box-shadow: inset 0 0 3px rgba(224,241,250,.09),
+              0 0 3px rgba(224,241,250,.05);
+}
+.formula-tap-pulse::after { display: none; }
+@keyframes formula-refractive-wave {
+  0% { transform: translate(-50%, -50%) scale(.008); opacity: 0; }
+  14% { opacity: .42; }
+  72% { opacity: .34; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+body[data-theme="light"] .formula-tap-pulse::before {
+  border-color: rgba(36,60,78,.19);
+  background: radial-gradient(circle, transparent 91%,
+       rgba(255,255,255,.08) 95%, rgba(20,40,60,.10) 97%, transparent 100%);
+  box-shadow: inset 0 0 3px rgba(18,35,50,.07), 0 0 3px rgba(18,35,50,.04);
+}
+.story-line.story-equation-line, .story-line.story-equation-line:last-child {
+  color: #f1f3f5 !important;
+  font: normal clamp(16px,4.4vw,22px)/1.6 Georgia, "Times New Roman", serif !important;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.story-equation-softcap { color: #f16c75; }
+@media (prefers-reduced-motion: reduce) {
+  .formula-tap-pulse { animation-duration: 1ms; }
+}
+
+/* v3.3：位移滤镜直接使笔画和时刻进度条发生真实的像素形变。 */
+.formula-wave-content.is-distorted {
+  filter: url(#formula-wave-displacement) !important;
+}
+.formula-wave-content {
+  isolation: isolate;
+}
+/* 表达式采用原生文字布局，禁止 v3.2 的逐字符晃动样式。 */
+.wave-glyph { display: contents; }
+@media (prefers-reduced-motion: reduce) {
+  .formula-wave-content.is-distorted { filter: none !important; }
+}
+
+
+/* v3.4：与实际折射场同步的轻微明暗细线；绝不拦截公式点击。 */
+.formula-wave-light {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  background: transparent;
+  border-radius: inherit;
+}
+
+
+/* v3.5：游戏长按不出现文字选区或安卓原生复制菜单。 */
+.app-shell,
+.app-shell *:not(input):not(textarea):not([contenteditable="true"]),
+.app-shell *::before,
+.app-shell *::after {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* 路由动画统一由 JS 同一时间线控制；阻止旧 CSS 动画叠加和退出布局突变。 */
+.page.is-entering, .page.is-exiting {
+  animation: none !important;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+/* 剧情页面退出时仍保持 flex，不因移除 is-visible 产生布局跳动。 */
+.page.page-story.is-exiting { display: flex; flex-direction: column; }
+
+/* v4.0：开发者模式视觉密码提示，入口始终可以接受连续点击。 */
+.developer-password-panel {
+  border: 1px solid var(--border); border-radius: 2px;
+  background: var(--surface); padding: 12px 14px;
+  margin-top: 7px; display: flex; flex-direction: column; gap: 8px;
+}
+.developer-password-panel[hidden] { display: none !important; }
+.developer-password-panel label { font-size: 12px; color: var(--muted); }
+.developer-password-row { display: flex; gap: 8px; min-width: 0; }
+.developer-password-row input {
+  flex: 1; min-width: 0; border: 1px solid var(--border);
+  border-radius: 2px; background: var(--surface-subtle);
+  color: var(--text); font: inherit; font-size: 14px; padding: 9px;
+  user-select: text; -webkit-user-select: text;
+}
+.developer-password-row button {
+  padding: 8px 14px; border: 1px solid var(--border);
+  border-radius: 2px; background: var(--surface-subtle);
+  color: var(--text); font-size: 13px;
+}
+.developer-password-feedback { min-height: 14px; font-size: 12px; color: var(--muted); }
+
+/* v4.0 — 设置二级页面：低对比、等高布局与“元”一致的切换节奏。 */
+.settings-tabs {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px; padding: 3px;
+  border: 1px solid var(--border); border-radius: 2px; background: var(--surface);
+  margin-bottom: 12px;
+}
+.settings-tab {
+  min-height: 43px; border: 1px solid transparent; border-radius: 2px;
+  background: transparent; color: var(--muted); font-size: 13px; font-weight: 650;
+  transition: background-color var(--theme-duration) var(--theme-ease),
+              border-color var(--theme-duration) var(--theme-ease),
+              color var(--theme-duration) var(--theme-ease);
+}
+.settings-tab.is-active {
+  color: var(--accent); background: var(--accent-bg); border-color: var(--border);
+}
+.settings-tab-panel { width: 100%; min-width: 0; }
+.about-copy {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 21px; padding: clamp(28px, 7vh, 60px) 18px;
+  border: 1px solid var(--border); border-radius: 2px;
+  background: var(--surface); text-align: center;
+}
+.about-copy p {
+  color: var(--text); font-size: clamp(12px, 3.3vw, 14px);
+  line-height: 1.85; font-weight: 450; max-width: 100%;
+  overflow-wrap: anywhere; text-wrap: pretty;
+}
+.about-copy p:last-child { color: var(--muted); }
+@media (prefers-reduced-motion: reduce) {
+  .settings-tab { transition: none; }
+}
+
+</style>
+</head>
+<body data-theme="dark">
+  <main id="official-path-warning" role="alert">！请从官方路径进入  ！</main>
+  <!-- 本地 SVG 位移过滤器：波带以中性映射为底，仅扭曲实际经过的像素。 -->
+  <svg class="wave-filter-defs" width="0" height="0" aria-hidden="true" focusable="false"
+       style="position:absolute;width:0;height:0;overflow:hidden;pointer-events:none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="formula-wave-displacement" x="-25%" y="-25%" width="150%" height="150%"
+              color-interpolation-filters="sRGB" primitiveUnits="userSpaceOnUse">
+        <feImage id="formula-wave-map" x="0" y="0" width="1" height="1"
+                 preserveAspectRatio="none" result="displacement-field" />
+        <feDisplacementMap in="SourceGraphic" in2="displacement-field"
+                           scale="16" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+  <div class="app-shell">
+    <aside class="side-nav" aria-label="页面导航">
+      <nav aria-label="页面">
+        <button type="button" class="nav-button is-active" data-route="formulas" aria-current="page"><span class="nav-icon" aria-hidden="true">ƒ</span>公式</button>
+        <button type="button" class="nav-button" data-route="improve" hidden><span class="nav-icon" aria-hidden="true">✧</span>改进</button>
+        <button type="button" class="nav-button" data-route="meta" hidden><span class="nav-icon meta-accent" aria-hidden="true">Ψ</span><span class="meta-accent meta-nav-label">元</span></button>
+        <button type="button" class="nav-button" data-route="story"><span class="nav-icon" aria-hidden="true">◇</span>剧情</button>
+        <button type="button" class="nav-button" data-route="settings"><span class="nav-icon" aria-hidden="true">⚙</span>设置</button>
+      </nav>
+    </aside>
+
+    <div class="app-main">
+      <header class="topbar" aria-label="当前研究状态">
+        <div class="psi-strip" id="psi-status" aria-label="元货币 Ψ" hidden>
+          <span class="psi-symbol">Ψ</span><span class="psi-equals">=</span>
+          <strong class="psi-number" id="psi-number">0</strong>
+        </div>
+        <div class="status-row">
+          <div class="status-item status-currency">
+            <span class="status-label"><span class="math-var" id="active-x-label">x<sub>1</sub></span></span>
+            <span class="status-equals" aria-hidden="true">=</span>
+            <strong class="status-number" id="value-number">0</strong>
+          </div>
+          <div class="status-item status-improve" id="p1-status" aria-label="改进货币 p1" hidden>
+            <span class="status-label"><span class="math-var">p<sub>1</sub></span></span>
+            <span class="status-equals" aria-hidden="true">=</span>
+            <strong class="status-number" id="p1-number">0</strong>
+          </div>
+          <div class="status-item status-improve" id="p2-status" aria-label="改进货币 p2" hidden>
+            <span class="status-label"><span class="math-var">p<sub>2</sub></span></span>
+            <span class="status-equals" aria-hidden="true">=</span>
+            <strong class="status-number" id="p2-number">0</strong>
+          </div>
+          <div class="status-item status-improve" id="p3-status" aria-label="改进货币 p3" hidden>
+            <span class="status-label"><span class="math-var">p<sub>3</sub></span></span>
+            <span class="status-equals" aria-hidden="true">=</span>
+            <strong class="status-number" id="p3-number">0</strong>
+          </div>
+          <div class="status-item status-time">
+            <span class="status-label">时刻</span>
+            <span class="status-equals" aria-hidden="true">=</span>
+            <strong class="status-number" id="param-time">1.00</strong>
+          </div>
+        </div>
+
+      </header>
+      <main class="content" id="main-content">
+        <section class="page is-visible" data-page="formulas" id="page-formulas" aria-label="公式">
+          <section class="formula-panel" id="formula-panel" tabindex="0" role="button" aria-label="当前公式，点击推动时刻进度">
+            <div class="formula-wave-content" id="formula-wave-content">
+              <div class="formula-label">当前公式</div>
+              <div class="formula-equation" id="current-equation"><span class="math-var">x<sub>1</sub></span> = <span class="math-var">x<sub>1</sub></span> + <span class="math-var formula-a">a</span></div>
+              <div class="formula-param">a = <strong id="param-a">1</strong><span id="param-b-label" hidden>，b = <strong id="param-b">1</strong></span><span id="param-c-label" hidden>，c = <strong id="param-c">0</strong></span></div>
+              <div class="tick-progress" id="tick-progress" role="progressbar" aria-label="当前时刻进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div class="tick-progress-fill" id="tick-progress-fill"></div>
+              </div>
+            </div>
+          </section>
+          <section class="upgrades" aria-labelledby="upgrades-heading" id="upgrades-section">
+            <div class="section-head info-head">
+              <h2 id="upgrades-heading">升级</h2>
+              <button class="formula-help" type="button" id="upgrade-help" aria-label="长按查看升级效果公式" title="长按查看升级效果公式">?</button>
+            </div>
+            <div class="mode-swap" id="upgrades-modes">
+              <div class="mode-normal upgrade-list">
+                <article class="upgrade-row">
+                  <div class="upgrade-detail">
+                    <div class="upgrade-heading">
+                      <strong>变量 a</strong>
+                      <span class="upgrade-level" id="level-a">Lv.1 → Lv.2</span>
+                    </div>
+                    <span class="upgrade-effect" id="effect-a">效果 1 → 2</span>
+                  </div>
+                  <button type="button" class="buy-button" id="buy-a" disabled><span>购买</span><strong id="cost-a">5</strong></button>
+                </article>
+                <article class="upgrade-row" id="formula-three-b-upgrade" hidden>
+                  <div class="upgrade-detail">
+                    <div class="upgrade-heading">
+                      <strong>变量 b</strong>
+                      <span class="upgrade-level" id="level-b-three">Lv.0 → Lv.1</span>
+                    </div>
+                    <span class="upgrade-effect" id="effect-b-three">效果 1 → 1.1</span>
+                  </div>
+                  <button type="button" class="buy-button" id="buy-b-three" disabled><span>购买</span><strong id="cost-b-three">5</strong></button>
+                </article>
+                <article class="upgrade-row">
+                  <div class="upgrade-detail">
+                    <div class="upgrade-heading">
+                      <strong>时刻</strong>
+                      <span class="upgrade-level" id="level-time">Lv.0 → Lv.1</span>
+                    </div>
+                    <span class="upgrade-effect" id="effect-time">效果 1.00 → 1.06</span>
+                  </div>
+                  <button type="button" class="buy-button" id="buy-time" disabled><span>购买</span><strong id="cost-time">10</strong></button>
+                </article>
+              </div>
+              <div class="mode-formula upgrade-list" aria-hidden="true">
+                <article class="upgrade-row formula-row">
+                  <strong class="formula-row-title">变量 a</strong>
+                  <span class="formula-row-math" id="upgrade-a-formula">a = 等级</span>
+                </article>
+                <article class="upgrade-row formula-row" id="formula-three-b-formula-row" hidden>
+                  <strong class="formula-row-title">变量 b</strong>
+                  <span class="formula-row-math">b = 1 + 等级 / 10</span>
+                </article>
+                <article class="upgrade-row formula-row">
+                  <strong class="formula-row-title">时刻</strong>
+                  <span class="formula-row-math" id="upgrade-time-formula">时刻 = <span class="power-expression">1.1111<sup>（（等级 + 5）<sup>0.75</sup> − 3.3437）</sup></span></span>
+                </article>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="page page-story" data-page="story" id="page-story" aria-labelledby="story-page-heading" hidden>
+          <h1 class="page-title" id="story-page-heading">剧情</h1>
+          <p class="story-tree-note">剧情&amp;分支</p>
+          <div class="story-tree" id="story-tree" tabindex="0" aria-label="剧情树，可以上下左右拖动，范围有限">
+            <div class="story-track">
+              <!-- 公式 2 与公式 3 是从 1-4 向上的两条独立剧情分支。 -->
+              <div class="story-branch-pair">
+                <div class="story-branch-column story-branch-left">
+                  <button type="button" class="story-tree-node is-locked is-unknown" id="story-node-9" data-story-id="9" aria-label="未知剧情"><span class="story-node-index">?</span><span class="story-node-title" hidden></span></button>
+                  <span class="story-connector" aria-hidden="true"></span>
+                  <button type="button" class="story-tree-node is-locked is-unknown" id="story-node-7" data-story-id="7" aria-label="未知剧情"><span class="story-node-index">?</span><span class="story-node-title" hidden></span></button>
+                  <span class="story-connector" aria-hidden="true"></span>
+                  <button type="button" class="story-tree-node is-locked is-unknown" id="story-node-6" data-story-id="6" aria-label="未知剧情"><span class="story-node-index">?</span><span class="story-node-title" hidden></span></button>
+                  <span class="story-connector" aria-hidden="true"></span>
+                  <button type="button" class="story-tree-node is-locked is-unknown" id="story-node-5" data-story-id="5" aria-label="未知剧情"><span class="story-node-index">?</span><span class="story-node-title" hidden></span></button>
+                </div>
+                <div class="story-branch-column story-branch-right">
+                  <button type="button" class="story-tree-node is-locked is-unknown" id="story-node-11" data-story-id="11" aria-label="未知剧情"><span class="story-node-index">?</span><span class="story-node-title" hidden></span></button>
+                  <span class="story-connector" aria-hidden="true"></span>
+                  <button type="button" class="story-tree-node is-locked is-unknown" id="story-node-10" data-story-id="10" aria-label="未知剧情"><span class="story-node-index">?</span><span class="story-node-title" hidden></span></button>
+                  <span class="story-connector" aria-hidden="true"></span>
+                  <button type="button" class="story-tree-node is-locked is-unknown" id="story-node-8" data-story-id="8" aria-label="未知剧情"><span class="story-node-index">?</span><span class="story-node-title" hidden></span></button>
+                </div>
+              </div>
+              <svg class="story-fork-connectors" viewBox="0 0 220 60" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                <path d="M55 0 L110 60 M165 0 L110 60"></path>
+              </svg>
+              <button type="button" class="story-tree-node is-locked is-unknown" id="story-node-4" data-story-id="4" aria-label="未知剧情"><span class="story-node-index">?</span><span class="story-node-title" hidden></span></button>
+              <span class="story-connector" aria-hidden="true"></span>
+              <button type="button" class="story-tree-node is-locked is-unknown" id="story-node-3" data-story-id="3" aria-label="未知剧情"><span class="story-node-index">?</span><span class="story-node-title" hidden></span></button>
+              <span class="story-connector" aria-hidden="true"></span>
+              <button type="button" class="story-tree-node is-locked is-unknown" id="story-node-2" data-story-id="2" aria-label="未知剧情"><span class="story-node-index">?</span><span class="story-node-title" hidden></span></button>
+              <span class="story-connector" aria-hidden="true"></span>
+              <button type="button" class="story-tree-node" id="story-node-1" data-story-id="1" aria-label="剧情 1-1：旅程开始，查看介绍"><span class="story-node-index">1-1</span><span class="story-node-title">旅程开始</span></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" data-page="improve" id="page-improve" aria-labelledby="improve-heading">
+          <div class="info-head improve-head">
+            <h1 id="improve-heading">改进</h1>
+            <button class="formula-help" type="button" id="improve-help" aria-label="长按查看改进转换公式" title="长按查看改进转换公式">?</button>
+          </div>
+          <div class="mode-swap improve-modes" id="improve-modes">
+            <div class="mode-normal improve-simple">
+              <button type="button" class="improve-action" id="improve-action" disabled><span>改进</span><span id="improve-action-reward" hidden>以获取<span id="reward-preview">0</span><span class="math-var" id="improve-reward-currency">p<sub>1</sub></span></span></button>
+              <p class="improve-reset-note" id="improve-reset-note">需要 <span class="math-var">x<sub>1</sub></span> ≥ 1,000。改进会重置 <span class="math-var">x<sub>1</sub></span>、变量 a 和时刻<span id="b-preserve-note" hidden>，变量 b 等级保留</span>。</p>
+            </div>
+            <div class="mode-formula improve-formula" aria-hidden="true">
+              <div class="conversion-math" id="conversion-math">
+                <span class="conversion-formula" id="conversion-formula"><span class="math-var">p<sub>1</sub></span> += 四舍五入（5<sup>（（log<sub>10</sub>（<span class="math-var">x<sub>1</sub></span>）−2）<sup>0.9</sup>−1）</sup>）</span>
+              </div>
+            </div>
+          </div>
+          <p class="meta-empty other-formula-note" id="other-formula-note" hidden>当前公式的改进尚未开放。</p>
+          <section class="improve-upgrades" id="improve-upgrades" aria-labelledby="improve-upgrades-heading" hidden>
+            <div class="section-head info-head">
+              <h2 id="improve-upgrades-heading">升级</h2>
+              <button class="formula-help" type="button" id="b-upgrade-help" aria-label="长按查看变量 b 的效果公式" title="长按查看变量 b 的效果公式">?</button>
+            </div>
+            <div class="mode-swap" id="b-upgrade-modes">
+              <div class="mode-normal upgrade-list">
+                <article class="upgrade-row">
+                  <div class="upgrade-detail">
+                    <div class="upgrade-heading">
+                      <strong id="improve-variable-heading">变量 b</strong>
+                      <span class="upgrade-level" id="level-b">Lv.1 → Lv.2</span>
+                    </div>
+                    <span class="upgrade-effect" id="effect-b">效果 1 → 2</span>
+                  </div>
+                  <button type="button" class="buy-button" id="buy-b" disabled><span>购买</span><strong id="cost-b">1 p₁</strong></button>
+                </article>
+              </div>
+              <div class="mode-formula upgrade-list" aria-hidden="true">
+                <article class="upgrade-row formula-row">
+                  <strong class="formula-row-title" id="improve-variable-formula-heading">变量 b</strong>
+                  <span class="formula-row-math" id="b-effect-formula">b = 等级</span>
+                </article>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="page" data-page="meta" id="page-meta" aria-labelledby="meta-heading" hidden>
+          <div class="info-head meta-head">
+            <h1 id="meta-heading"><span class="meta-accent">元</span></h1>
+            <button type="button" class="formula-help meta-help-button" id="meta-help" aria-label="查看元货币说明">?</button>
+          </div>
+          <div class="meta-tabs" role="tablist" aria-label="元的子页面">
+            <button type="button" class="meta-tab is-active" id="meta-tab-unlock" data-meta-tab="unlock" role="tab" aria-controls="meta-panel-unlock" aria-selected="true">解锁</button>
+            <button type="button" class="meta-tab" id="meta-tab-upgrades" data-meta-tab="upgrades" role="tab" aria-controls="meta-panel-upgrades" aria-selected="false">升级</button>
+          </div>
+          <section class="meta-tab-panel" id="meta-panel-unlock" role="tabpanel" aria-labelledby="meta-tab-unlock">
+            <div class="meta-unlock-nodes" aria-label="公式解锁与研究选择">
+              <div class="meta-branch-pair">
+                <button type="button" class="meta-formula-node" id="meta-formula-node-2" data-formula-node="2" aria-label="查看公式 2">2</button>
+                <button type="button" class="meta-formula-node" id="meta-formula-node-3" data-formula-node="3" aria-label="查看公式 3">3</button>
+              </div>
+              <svg class="meta-branch-edges" viewBox="0 0 236 64" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+                <path d="M39 0 L118 64 M197 0 L118 64"></path>
+              </svg>
+              <button type="button" class="meta-formula-node is-running" id="meta-formula-node-1" data-formula-node="1" aria-label="查看公式 1，正在进行" aria-current="true">1</button>
+            </div>
+          </section>
+          <section class="meta-tab-panel" id="meta-panel-upgrades" role="tabpanel" aria-labelledby="meta-tab-upgrades" hidden>
+            <p class="meta-empty">暂无可用升级</p>
+          </section>
+        </section>
+
+        <section class="page" data-page="settings" id="page-settings" aria-labelledby="settings-heading" hidden>
+          <h1 class="page-title" id="settings-heading">设置</h1>
+          <div class="settings-tabs" role="tablist" aria-label="设置子页面">
+            <button type="button" class="settings-tab is-active" id="settings-tab-general" data-settings-tab="general" role="tab" aria-controls="settings-panel-general" aria-selected="true">通用</button>
+            <button type="button" class="settings-tab" id="settings-tab-about" data-settings-tab="about" role="tab" aria-controls="settings-panel-about" aria-selected="false">关于</button>
+          </div>
+          <section class="settings-tab-panel" id="settings-panel-general" role="tabpanel" aria-labelledby="settings-tab-general">
+          <section class="setting-card" aria-label="主题切换">
+            <div class="setting-label"><strong>主题</strong></div>
+            <div class="theme-options" role="group" aria-label="切换主题">
+              <button type="button" data-theme-choice="dark" class="is-active" aria-pressed="true">深色</button>
+              <button type="button" data-theme-choice="light" aria-pressed="false">浅色</button>
+            </div>
+          </section>
+          <section class="setting-card developer-main-card" aria-label="开发者模式">
+            <div class="setting-label"><strong>开发者模式</strong></div>
+            <button type="button" class="setting-toggle" id="developer-mode-toggle" aria-pressed="false" aria-controls="developer-options developer-password-panel">输入密码</button>
+          </section>
+          <div class="developer-password-panel" id="developer-password-panel" hidden>
+            <label for="developer-password-input">请输入密码</label>
+            <div class="developer-password-row">
+              <input id="developer-password-input" type="password" autocomplete="off" inputmode="text" placeholder="密码" aria-describedby="developer-password-feedback">
+              <button type="button" id="developer-password-submit">确认</button>
+            </div>
+            <span class="developer-password-feedback" id="developer-password-feedback" role="status" aria-live="polite"></span>
+          </div>
+          <section class="developer-options" id="developer-options" aria-label="开发者选项" hidden>
+            <div class="setting-card developer-option-row">
+              <div class="setting-label"><strong>时刻速度 ×10</strong></div>
+              <button type="button" class="setting-toggle" id="developer-speed-toggle" aria-pressed="false">关闭</button>
+            </div>
+            <div class="setting-card developer-option-row">
+              <div class="setting-label"><strong>p 获取 ×10</strong></div>
+              <button type="button" class="setting-toggle" id="developer-pgain-toggle" aria-pressed="false">关闭</button>
+            </div>
+            <div class="setting-card developer-option-row">
+              <div class="setting-label"><strong>显示计时详情</strong></div>
+              <button type="button" class="setting-toggle" id="developer-details-toggle" aria-pressed="false" aria-controls="developer-details">关闭</button>
+            </div>
+            <div class="developer-details" id="developer-details" hidden>
+              <span>实际时刻 = <strong id="developer-effective-time">1.00</strong></span>
+              <span>当前时刻进度 = <strong id="developer-progress">0%</strong></span>
+            </div>
+          </section>
+          <section class="setting-card reset-card" aria-label="硬重置">
+            <div class="setting-label"><strong>硬重置</strong></div>
+            <button type="button" class="reset-button" id="open-reset">重置游戏</button>
+          </section>
+          </section>
+          <section class="settings-tab-panel" id="settings-panel-about" role="tabpanel" aria-labelledby="settings-tab-about" hidden>
+            <div class="about-copy" aria-label="关于本游戏及版权声明">
+              <p>本游戏由 编程-无 独立制作</p>
+              <p>完全免费，公开开放游玩</p>
+              <p>未经许可，禁止擅自转载、修改或商用</p>
+              <p>游戏相关权益及最终解释权归创作者所有</p>
+              <p>感谢您的游玩与对原创作品的支持！</p>
+            </div>
+          </section>
+        </section>
+      </main>
+      <nav class="bottom-nav" aria-label="页面导航">
+        <button type="button" class="bottom-button is-active" data-route="formulas" aria-current="page"><span aria-hidden="true">ƒ</span>公式</button>
+        <button type="button" class="bottom-button" data-route="improve" hidden><span aria-hidden="true">✧</span>改进</button>
+        <button type="button" class="bottom-button" data-route="meta" hidden><span class="meta-accent" aria-hidden="true">Ψ</span><span class="meta-accent meta-nav-label">元</span></button>
+        <button type="button" class="bottom-button" data-route="story"><span aria-hidden="true">◇</span>剧情</button>
+        <button type="button" class="bottom-button" data-route="settings"><span aria-hidden="true">⚙</span>设置</button>
+      </nav>
+    </div>
+  </div>
+  <dialog id="reset-dialog" class="reset-dialog" aria-labelledby="reset-title" aria-describedby="reset-description">
+    <h2 id="reset-title">确认硬重置？</h2>
+    <p id="reset-description">将清空全部游戏数据，包括当前资源、升级、历史最高值、剧情观看记录和所有解锁；游戏将重新启动并播放剧情 1。此操作无法撤销。</p>
+    <div class="dialog-actions">
+      <button type="button" class="dialog-cancel" id="cancel-reset">取消</button>
+      <button type="button" class="dialog-confirm" id="confirm-reset">确认重置</button>
+    </div>
+  </dialog>
+  <dialog id="meta-help-dialog" class="reset-dialog meta-help-dialog" aria-labelledby="meta-help-title" aria-describedby="meta-help-description">
+    <h2 id="meta-help-title" class="meta-accent">元</h2>
+    <p id="meta-help-description">Ψ 等于你所有公式的历史最高 x 相乘：</p>
+    <p class="psi-equation" id="psi-equation">Ψ = x₁</p>
+    <div class="dialog-actions">
+      <button type="button" class="dialog-replay" id="close-meta-help">知道了</button>
+    </div>
+  </dialog>
+  <dialog id="meta-formula-dialog" class="reset-dialog meta-formula-dialog" aria-labelledby="meta-formula-title">
+    <h2 id="meta-formula-title" class="meta-accent">公式 1</h2>
+    <p class="meta-formula-current" id="meta-formula-current"><span class="math-var">x<sub>1</sub></span> = <span class="math-var">x<sub>1</sub></span> + <span class="math-var">a</span></p>
+    <p class="meta-formula-unlock-hint" id="meta-formula-hint"></p>
+    <div class="dialog-actions">
+      <button type="button" class="dialog-cancel" id="close-meta-formula">关闭</button>
+      <button type="button" class="dialog-replay" id="meta-formula-action">正在进行</button>
+    </div>
+  </dialog>
+  <dialog id="story-info-dialog" class="reset-dialog story-info-dialog" aria-labelledby="story-info-title" aria-describedby="story-info-description">
+    <div class="story-info-number" id="story-info-number">剧情 1</div>
+    <h2 id="story-info-title">旅程开始</h2>
+    <p id="story-info-description">一段关于公式研究启动的故事...</p>
+    <div class="dialog-actions">
+      <button type="button" class="dialog-cancel" id="cancel-story">取消</button>
+      <button type="button" class="dialog-replay" id="replay-story">查看</button>
+    </div>
+  </dialog>
+
+  <div class="story-overlay" id="story-overlay" role="dialog" aria-modal="true" aria-label="剧情：旅程开始">
+    <button type="button" class="story-stage" id="story-stage" aria-label="点击显示下一行，全部显示后点击结束">
+      <span class="story-lines" id="story-lines" aria-live="polite"></span>
+      <span class="story-tip" id="story-tip">点击显示下一行</span>
+    </button>
+  </div>
+
+  <script>
+if (window.__FORMULALAB_OFFICIAL_ALLOWED__ === true) {
+
+/* 公式研究 — 运行环境自检，© 编程-无。免费游玩不等于开放复制或商用许可。 */
+(() => {
+  'use strict';
+  const hostname = location.hostname.toLowerCase();
+  const protocol = location.protocol;
+  const environment = protocol === 'file:' ? '本地预览'
+    : hostname.endsWith('.github.io') ? 'GitHub Pages'
+    : hostname === 'bilibili.com' || hostname.endsWith('.bilibili.com') ? 'Bilibili'
+    : hostname === 'localhost' || hostname === '127.0.0.1' ? '本地服务器'
+    : '其他网页环境';
+  const diagnostics = Object.freeze({
+    release: '4.0',
+    environment,
+    secureContext: Boolean(window.isSecureContext),
+    webAnimations: typeof Element !== 'undefined' && Boolean(Element.prototype.animate),
+    bigInt: typeof BigInt === 'function',
+    subresourceIntegrity: Boolean(document.createElement('script').integrity !== undefined)
+  });
+  // 只读信息供开发者核查，避免对平台 WebView 进行破坏性的强制封锁。
+  Object.defineProperty(window, 'FormulaLabDiagnostics', {value: diagnostics, configurable: false, writable: false});
+  if (environment === '其他网页环境') {
+    console.info('[公式研究] 当前为非预设环境；如非授权转载，请以“设置 > 关于”声明为准。');
+  }
+  if (protocol === 'http:' && !['localhost','127.0.0.1'].includes(hostname)) {
+    console.warn('[公式研究] 建议在 HTTPS 环境中发布。');
+  }
+  if (!diagnostics.bigInt) console.warn('[公式研究] 此浏览器不支持 BigInt，游戏可能无法运行。');
+})();
+
+
+}
+</script>
+  <script>
+if (window.__FORMULALAB_OFFICIAL_ALLOWED__ === true) {
+
+(function () {
+  'use strict';
+  const MAX_LEVEL = 10000;
+  // 公式 2 使用 12 位小数的定点 BigInt，避免把 1.1 误当作整数、
+  // 也避免普通浮点数在后期增长中溢出。其他公式仍使用原本的整数 BigInt。
+  const SCALE = 1000000000000n;
+  // 公式 2 和 3 均采用 12 位小数定点表示：公式 3 的 a^b 可为非整数。
+  const INITIAL_X = { 1: 0n, 2: 1n * SCALE, 3: 1n * SCALE };
+  const formulaScale = id => (id === 2 || id === 3) ? SCALE : 1n;
+  function scaledPowerPrice(log10Value, roundToInteger) {
+    if (!Number.isFinite(log10Value) || log10Value > 10000) return null;
+    if (log10Value < 15) {
+      const value = Math.pow(10, log10Value);
+      if (roundToInteger) return BigInt(Math.round(value)) * SCALE;
+      // 预留给可能采用非整数价格的其他公式。
+      return BigInt(Math.round(value * 1e9)) * 1000n;
+    }
+    // 大于 JS 安全整数时，保留约 15 位有效数字。
+    const exponent = Math.floor(log10Value);
+    const lead = BigInt(Math.round(Math.pow(10, log10Value - exponent + 14)));
+    return lead * 10n ** BigInt(exponent - 14) * SCALE;
+  }
+  const formulaTwoA = level => 1 + level / 10;
+  const formulaTwoB = level => 1 + level / 10;
+  const formulaThreeB = level => 1 + level / 10;
+  const formulaThreeC = level => level / 10;
+  const formulaThreeCostC = level => scaledPowerPrice((Math.pow(level + 2, 1.1) - Math.pow(2, 1.1)) * Math.log10(2), true);
+  const formulaThreeCostB = level => scaledPowerPrice((Math.pow(level, 1.1) + 1) * Math.log10(5), true);
+  // 公式 2 改进层：b 从 0 级开始，升级消耗定点 p₂。
+  const formulaTwoCostB = level => scaledPowerPrice(Math.pow(level, 1.15) * Math.log10(1.5), true);
+  function formulaTwoCostA(level) {
+    const logPrice = Math.log10(5) + (Math.pow((level - 1) + 5, 1.2) - Math.pow(5, 1.2)) * Math.log10(1.2);
+    return scaledPowerPrice(logPrice, true);
+  }
+  function formulaTwoCostTime(level) {
+    const logPrice = 1 + Math.pow(level, 1 + level / 500) * Math.log10(2);
+    return scaledPowerPrice(logPrice, true);
+  }
+  const makeFormula = id => ({
+    x: INITIAL_X[id], aLevel: 1, timeLevel: 0,
+    bUnlocked: id === 3, bUpgradeUnlocked: false,
+    bLevel: id === 2 || id === 3 ? 0 : 1, cLevel: 0, cUnlocked: false, softcapActive: false
+  });
+  const formulas = { 1: makeFormula(1) };
+  let owned = new Set([1]);
+  let activeId = 1;
+  const peaks = { 1: 0n };
+  const improvementCurrencies = { 1: 0n, 2: 0n, 3: 0n };
+  // p₂ 与 p₃ 均采用 12 位小数定点表示。
+  // p₂ 有非整数奖励，用和 x₂ 一样的 12 位定点精度储存。
+  const timeAtLevel = (level, id = activeId) => id === 2
+    ? 0.5 + 0.02 * Math.pow(level, 1.176)
+    : Math.pow(1.1111, Math.pow(level + 5, 0.75) - 3.3437);
+  const costAAt = (level, id = activeId) => {
+    if (id === 2) return formulaTwoCostA(level);
+    const n = BigInt(level);
+    return 5n * n * (n + 1n) / 2n * formulaScale(id);
+  };
+  const costTimeAt = (level, id = activeId) => id === 2
+    ? formulaTwoCostTime(level)
+    : 10n * 2n ** BigInt(level) * formulaScale(id);
+  function peakProduct() {
+    let result = 1n;
+    for (const id of owned) result *= peaks[id] ?? INITIAL_X[id];
+    return result;
+  }
+  function peakProductScale() {
+    let result = 1n;
+    for (const id of owned) result *= formulaScale(id);
+    return result;
+  }
+  const state = {
+    get x() { return formulas[activeId].x; },
+    set x(value) { formulas[activeId].x = BigInt(value); recordPeak(); },
+    get peakXs() { return peaks; },
+    get psi() { return peakProduct(); },
+    get psiScale() { return peakProductScale(); },
+    get scale() { return formulaScale(activeId); },
+    improvementCurrencies,
+    get p1() { return improvementCurrencies[1]; },
+    get p2() { return improvementCurrencies[2]; },
+    get p3() { return improvementCurrencies[3]; },
+    get activeId() { return activeId; },
+    get ownedIds() { return [...owned].sort((a,b) => a-b); },
+    get aLevel() { return formulas[activeId].aLevel; },
+    get timeLevel() { return formulas[activeId].timeLevel; },
+    get bUnlocked() { return formulas[activeId].bUnlocked; },
+    get bUpgradeUnlocked() { return formulas[activeId].bUpgradeUnlocked; },
+    get bLevel() { return formulas[activeId].bLevel; },
+    get cLevel() { return formulas[activeId].cLevel; },
+    get cUnlocked() { return !!formulas[activeId].cUnlocked; },
+    get c() { return activeId === 3 ? formulaThreeC(formulas[3].cLevel) : 0; },
+    get a() { return activeId === 2 ? formulaTwoA(formulas[activeId].aLevel) : BigInt(formulas[activeId].aLevel); },
+    get b() {
+      return activeId === 2 ? formulaTwoB(formulas[2].bLevel)
+        : activeId === 3 ? formulaThreeB(formulas[3].bLevel)
+          : (formulas[activeId].bUnlocked ? BigInt(formulas[activeId].bLevel) : 1n);
+    },
+    get time() { return timeAtLevel(formulas[activeId].timeLevel); },
+    get softcapActive() { return !!formulas[activeId].softcapActive; }
+  };
+  // 测试模式：每次重新打开页面，所有公式、解锁与历史最高值都从初始状态开始。
+  // 不读取或写入游戏记录；主题选择由界面模块另行保存。
+  function flushPeak() {}
+  function recordPeak() {
+    const x = formulas[activeId].x;
+    if (x > (peaks[activeId] ?? 0n)) peaks[activeId] = x;
+  }
+  function isOwned(id) { return owned.has(id); }
+  function requiredPsi(id) {
+    if (id === 1) return 0n;
+    if (owned.has(id)) return 0n;
+    // 任意一个新公式先以 10⁴ 解锁，第三个以 10¹⁰ 解锁。
+    return owned.size === 1 ? 10000n : 10000000000n;
+  }
+  function unlockFormula(id) {
+    if (![2,3].includes(id)) return false;
+    if (owned.has(id)) return true;
+    if (peakProduct() < requiredPsi(id) * peakProductScale()) return false;
+    owned.add(id);
+    formulas[id] = makeFormula(id);
+    peaks[id] = INITIAL_X[id];
+    return true;
+  }
+  function selectFormula(id) {
+    if (!owned.has(id)) return false;
+    recordPeak();
+    flushPeak(true);
+    activeId = id;
+    return true;
+  }
+  function costA() { return costAAt(formulas[activeId].aLevel); }
+  function costTime() { return costTimeAt(formulas[activeId].timeLevel); }
+  let bCostCacheLevel = -1;
+  let bCostCacheValue = 0n;
+  function costB() {
+    if (activeId === 3) return null;
+    if (activeId === 2) return formulaTwoCostB(formulas[2].bLevel);
+    const level = formulas[1].bLevel;
+    if (bCostCacheLevel === level) return bCostCacheValue;
+    const n = BigInt(level);
+    bCostCacheLevel = level;
+    bCostCacheValue = n * 21n ** n / 20n ** n;
+    return bCostCacheValue;
+  }
+  function unlockB() { formulas[1].bUnlocked = true; }
+  function unlockFormulaTwoB() {
+    if (!formulas[2]) return false;
+    formulas[2].bUnlocked = true;
+    return true;
+  }
+  function unlockFormulaThreeB() {
+    if (!formulas[3]) return false;
+    formulas[3].bUpgradeUnlocked = true;
+    return true;
+  }
+  function costFormulaThreeB() {
+    return activeId === 3 ? formulaThreeCostB(formulas[3].bLevel) : null;
+  }
+  function buyFormulaThreeB() {
+    if (activeId !== 3) return false;
+    const f = formulas[3];
+    if (!f.bUpgradeUnlocked || f.bLevel >= MAX_LEVEL) return false;
+    const cost = costFormulaThreeB();
+    if (cost === null || f.x < cost) return false;
+    recordPeak();
+    f.x -= cost;
+    f.bLevel++;
+    return true;
+  }
+  function unlockFormulaThreeC() {
+    if (!formulas[3]) return false;
+    formulas[3].cUnlocked = true;
+    return true;
+  }
+  function costC() {
+    return activeId === 3 ? formulaThreeCostC(formulas[3].cLevel) : null;
+  }
+  function buyC() {
+    if (activeId !== 3) return false;
+    const f = formulas[3];
+    if (!f.cUnlocked || f.cLevel >= MAX_LEVEL) return false;
+    const price = costC();
+    if (price === null || improvementCurrencies[3] < price) return false;
+    improvementCurrencies[3] -= price;
+    f.cLevel++;
+    return true;
+  }
+  function buyB() {
+    if (activeId !== 1 && activeId !== 2) return false;
+    const f = formulas[activeId];
+    if (!f.bUnlocked || f.bLevel >= MAX_LEVEL) return false;
+    const cost = costB();
+    if (cost === null) return false;
+    const currency = improvementCurrencies[activeId];
+    if (currency < cost) return false;
+    improvementCurrencies[activeId] -= cost;
+    f.bLevel++;
+    return true;
+  }
+  // 开发者模式可将所有改进货币的获得量临时放大；不修改兑换公式本身。
+  let pGainMultiplier = 1n;
+  function setPGainMultiplier(multiplier) { pGainMultiplier = multiplier === 10 ? 10n : 1n; }
+  function activateFormulaTwoSoftcap() {
+    if (!formulas[2]) return false;
+    formulas[2].softcapActive = true;
+    return true;
+  }
+  // 公式 2 的初值为 1；公式 3 的初值也为 1，b 等级 0、效果 1。
+  // 公式 3 使用定点 x₃，避免 a^b 非整数时丢失增长的小数部分。
+  function advance(steps) {
+    if (!Number.isSafeInteger(steps) || steps < 1) return;
+    const f = formulas[activeId];
+    const n = BigInt(steps), a = BigInt(f.aLevel);
+    if (activeId === 1) f.x += a * BigInt(f.bUnlocked ? f.bLevel : 1) * n;
+    else if (activeId === 2) {
+      const numerator = BigInt(10 + f.aLevel) * BigInt(f.bUnlocked ? 10 + f.bLevel : 10);
+      const factorDenominator = 100n;
+      if (!f.softcapActive) {
+        // 首次改进后乘以 b = 1 + bLevel/10；改进前 b 恒为 1。
+        f.x = f.x * numerator ** n / factorDenominator ** n;
+      } else {
+        // 软上限是状态相关的递推；每次更新都用当时的 x₂ 重新计算分母。
+        // x₂ 为 12 位定点数，+100 同样使用定点单位。
+        for (let step = 0; step < steps; step++) {
+          const logX = log10BigInt(f.x + 100n * SCALE) - 12;
+          const logDivisor = (logX - 2) * Math.log10(1.1);
+          let divisor;
+          if (logDivisor < 15) {
+            divisor = BigInt(Math.max(1, Math.round(Math.pow(10, logDivisor) * 1e12)));
+          } else {
+            const order = Math.floor(logDivisor);
+            const lead = BigInt(Math.round(Math.pow(10, logDivisor - order) * 1e12));
+            divisor = lead * 10n ** BigInt(order);
+          }
+          // divisor = 1.1^(log₁₀(100+x₂)−2) × 10¹²。
+          f.x = f.x * numerator * SCALE / (factorDenominator * divisor);
+        }
+      }
+    } else if (activeId === 3) {
+      // a 为正整数，b = 1 + Lv/10。以科学数量级计算 a^b，
+      // 将非整数结果按 12 位定点表示；大数继续保持约 15 位有效数字。
+      const exponent = (1 + f.bLevel / 10 + (f.cUnlocked ? f.cLevel / 10 : 0)) * Math.log10(f.aLevel);
+      const gain = scaledPowerPrice(exponent, false);
+      if (gain !== null) f.x += gain * n;
+    }
+    recordPeak();
+  }
+  function buy(which) {
+    const f = formulas[activeId];
+    const cost = which === 'a' ? costA() : which === 'time' ? costTime() : null;
+    if (cost === null || f.x < cost) return false;
+    if (which === 'a' && f.aLevel >= MAX_LEVEL) return false;
+    if (which === 'time' && f.timeLevel >= MAX_LEVEL) return false;
+    recordPeak();
+    flushPeak(true);
+    if (activeId === 2) {
+      // 公式 2 的两种升级均采用除法消费，必须先拥有至少等于价格的 x₂。
+      // cost 和 f.x 均为 SCALE 定点单位；运算后仍保留 12 位小数精度。
+      f.x = f.x * SCALE / cost;
+    } else {
+      f.x -= cost;
+    }
+    if (which === 'a') f.aLevel++;
+    else f.timeLevel++;
+    return true;
+  }
+  function log10BigInt(value) {
+    const digits = value.toString();
+    const prefix = digits.slice(0, 16);
+    return digits.length - 1 + Math.log10(Number(prefix)) - (prefix.length - 1);
+  }
+  function improvementReward() {
+    const x = formulas[1].x;
+    if (activeId !== 1 || x < 1000n) return 0n;
+    const logarithm = log10BigInt(x);
+    const exponent = Math.pow(logarithm - 2, 0.9) - 1;
+    const rewardLog = exponent * Math.log10(5);
+    if (rewardLog < 15) return BigInt(Math.round(Math.pow(5, exponent)));
+    const magnitude = Math.floor(rewardLog);
+    const leading = BigInt(Math.round(Math.pow(10, rewardLog - magnitude) * 1e15));
+    return leading * 10n ** BigInt(magnitude - 15);
+  }
+  function improveFormulaOne() {
+    if (activeId !== 1 || formulas[1].x < 1000n) return false;
+    recordPeak();
+    flushPeak(true);
+    improvementCurrencies[1] += improvementReward() * pGainMultiplier;
+    formulas[1].x = 0n;
+    formulas[1].aLevel = 1;
+    formulas[1].timeLevel = 0;
+    // b 在剧情 1-3「你加入了b」出现时解锁，而不是改进按钮按下后立即显示。
+    return true;
+  }
+  function improvementRewardTwo() {
+    const f = formulas[2];
+    if (activeId !== 2 || !f || f.x < 10000000000n * SCALE) return 0n;
+    // 临界值恰好 1e10 时，括号底数严格等于 1，必须恰好获得 1 p₂。
+    // 显式判定可避免未来改动对数算法后出现 0.999999999999 的边界误差。
+    if (f.x === 10000000000n * SCALE) return SCALE;
+    const logX = log10BigInt(f.x) - 12;
+    const base = logX - 9;
+    const power = 1.48 + logX / 50;
+    // 用户公式没有取整操作，奖励精确到 12 位小数。
+    const logReward = power * Math.log10(base);
+    if (!Number.isFinite(logReward) || logReward < -12) return 0n;
+    if (logReward < 3) return BigInt(Math.round(Math.pow(10, logReward) * 1e12));
+    const order = Math.floor(logReward);
+    const lead = BigInt(Math.round(Math.pow(10, logReward - order + 14)));
+    return lead * 10n ** BigInt(order) * SCALE / 100000000000000n;
+  }
+  function improveFormulaTwo() {
+    const f = formulas[2];
+    if (activeId !== 2 || !f || f.x < 10000000000n * SCALE) return false;
+    recordPeak();
+    improvementCurrencies[2] += improvementRewardTwo() * pGainMultiplier;
+    f.x = INITIAL_X[2];
+    f.aLevel = 1;
+    f.timeLevel = 0;
+    // b 在剧情 2-4「你添加了一个乘数b」出现时解锁；之后改进保留等级。
+    // 剧情 2-2 改写过的软上限属于公式结构，改进不会将其移除。
+    return true;
+  }
+  function improvementRewardThree() {
+    const f = formulas[3];
+    if (activeId !== 3 || !f || f.x < 10000n * SCALE) return 0n;
+    // log₁₀(10000) = 4，因此首次可改进时恰好获得 1p₃。
+    if (f.x === 10000n * SCALE) return SCALE;
+    const logX = log10BigInt(f.x) - 12;
+    const exponent = Math.pow(logX, 0.9) - Math.pow(4, 0.9);
+    const rewardLog = exponent * Math.log10(8);
+    // 公式 3 改进奖励四舍五入到整数；SCALE 仅用于内部定点货币存储。
+    return scaledPowerPrice(rewardLog, true);
+  }
+  function improveFormulaThree() {
+    const f = formulas[3];
+    if (activeId !== 3 || !f || f.x < 10000n * SCALE) return false;
+    const reward = improvementRewardThree();
+    if (reward === null) return false;
+    recordPeak();
+    improvementCurrencies[3] += reward * pGainMultiplier;
+    f.x = INITIAL_X[3];
+    f.aLevel = 1;
+    f.bLevel = 0; // b 是普通升级；改进层 c 保留等级。
+    f.timeLevel = 0;
+    return true;
+  }
+  function reset() {
+    owned = new Set([1]);
+    activeId = 1;
+    for (const id of [1,2,3]) {
+      if (id === 1) formulas[id] = makeFormula(1);
+      else delete formulas[id];
+      delete peaks[id];
+    }
+    peaks[1] = 0n;
+    improvementCurrencies[1] = 0n;
+    improvementCurrencies[2] = 0n;
+    improvementCurrencies[3] = 0n;
+    bCostCacheLevel = -1;
+    try {
+      for (const key of ['formula-lab-permanent-peaks-v1', 'formula-lab-formula-unlocks-v1', 'formula-lab-game-v03', 'formula-lab-game-v04', 'formula-lab-game-v05']) localStorage.removeItem(key);
+    } catch (_) {}
+  }
+  window.FormulaGame = {
+    state, formulaTwoA, formulaTwoB, formulaTwoCostB, formulaScale, formulas, isOwned, requiredPsi, unlockFormula, selectFormula, costA, costTime, costB,
+    advance, buy, buyB, unlockB, recordPeak, flushPeak, reset, timeAtLevel,
+    improvementReward, improveFormulaOne, improvementRewardTwo, improveFormulaTwo, improvementRewardThree, improveFormulaThree,
+    formulaThreeB, formulaThreeCostB, costFormulaThreeB, buyFormulaThreeB,
+    formulaThreeC, formulaThreeCostC, costC, buyC, unlockFormulaThreeC,
+    unlockFormulaTwoB, unlockFormulaThreeB,
+    setPGainMultiplier, activateFormulaTwoSoftcap, maxLevel: MAX_LEVEL
+  };
+})();
+
+
+}
+</script>
+  <script>
+if (window.__FORMULALAB_OFFICIAL_ALLOWED__ === true) {
+
+(function () {
+  'use strict';
+  // 每个剧情节点单独记录条件；没有提供正文的剧情不自动编造。
+  window.FormulaStories = [
+    {
+      id: 1,
+      displayId: '1-1',
+      title: '旅程开始',
+      description: '一段关于公式研究启动的故事...',
+      lines: [
+        '你是一位数学爱好者',
+        '你对各种公式十分感兴趣',
+        '现在，你终于有空好好研究它们了',
+        '你决定先从最简单的开始...',
+        'x = x + a'
+      ]
+    },
+    {
+      id: 2,
+      displayId: '1-2',
+      title: '首次改进',
+      description: '变量 a 达到 10 级后解锁。',
+      requiredALevel: 10,
+      unlockHint: '解锁条件：变量 a 等级 ≥ 10',
+      lines: [
+        '你创建了一个简单的线性方程',
+        '但它的增长逐渐缓慢...',
+        '你意识到了这一点，你决定 改进 它',
+        '解锁 改进'
+      ]
+    },
+    {
+      id: 3,
+      displayId: '1-3',
+      title: '改进公式',
+      description: '一段关于第一次改进后修改公式的故事...',
+      unlockHint: '解锁条件：完成一次改进',
+      lines: [
+        '你清除了公式',
+        '但你获得了一些想法，你管它们叫p',
+        '为了加快速度，你修改了你的公式',
+        '你加入了b',
+        'x = x + ab'
+      ]
+    },
+    {
+      id: 4,
+      displayId: '1-4',
+      title: '元',
+      description: '一段关于不断重置与记录研究成果的故事...',
+      requiredBLevel: 10,
+      unlockHint: '解锁条件：变量 b 等级 ≥ 10',
+      lines: [
+        '你一次又一次的重置',
+        '速度快了不少',
+        '但你开始感到厌倦',
+        '你将这些成果记录了下来',
+        '叫做 Ψ ',
+        '或许该试试其它公式了...',
+        '解锁 元 '
+      ]
+    },
+    {
+      id: 5,
+      displayId: '2-1',
+      title: '乘法',
+      description: '一段关于尝试乘法增长的故事...',
+      unlockHint: '解锁条件：首次前往公式 2',
+      lines: [
+        '你意识到了加法的局限性',
+        '随着x的变大，相对增长率却在越来越低',
+        '或许，可以试试乘法？',
+        '你重新设计了一个公式',
+        'x₂ = x₂ × a'
+      ]
+    },
+    {
+      id: 6,
+      displayId: '2-2',
+      title: '软上限',
+      description: '一段关于增长受到软上限影响的故事...',
+      unlockHint: '解锁条件：x₂ ≥ 100（首次）',
+      requiredX2: 100,
+      lines: [
+        '公式不断增长',
+        '你开心的看着x变大',
+        '但就在这时，公式发生了变化！',
+        '一串奇异的算式出现在了你的公式后',
+        '你感到公式开始放缓',
+        '你尝试去除它们...',
+        '遇到了 软上限 ！'
+      ]
+    },
+    {
+      id: 7,
+      displayId: '2-3',
+      title: '削弱',
+      description: '一段关于尝试对抗软上限的研究记录...',
+      unlockHint: '解锁条件：x₂ ≥ 1e10（首次）',
+      requiredX2: 10000000000,
+      lines: [
+        '你观察了许久这串诡异的算式',
+        '它在拖慢公式的增长！',
+        '你试图删掉它，但你失败了...',
+        '它顽强的黏在你的公式上，拖慢你的进度...',
+        '你意识到你得做点什么来对抗它',
+        '或者说削弱它...',
+        '解锁 改进'
+      ]
+    },
+    {
+      id: 8,
+      displayId: '3-1',
+      title: '指数',
+      description: '一段关于以指数增强公式增长的研究记录...',
+      unlockHint: '解锁条件：首次前往公式 3',
+      lines: [
+        '你想了想，或许你可以让a变得更强',
+        '让a以一定倍率乘以自身',
+        '它将会以更快的速度增长！',
+        '你创建了一个新公式...',
+        'x₃ = x₃ + a ^ b'
+      ]
+    },
+    {
+      id: 10,
+      displayId: '3-2',
+      title: '改进公式3',
+      description: '一段关于公式 3 首次研究突破的故事。',
+      unlockHint: '解锁条件：x₃ ≥ 10000（首次）',
+      requiredX3: 10000,
+      lines: [
+        '你在公式中添加了指数，速度确实快了不少',
+        '但你还是觉得不够快',
+        '你准备再一次清除它',
+        '在重新设计...',
+        '解锁 改进'
+      ]
+    },
+    {
+      id: 11,
+      displayId: '3-3',
+      title: '增强指数',
+      description: '公式 3 首次改进后，进一步增强指数的研究记录。',
+      unlockHint: '解锁条件：公式 3 首次改进',
+      lines: [
+        '你在公式中添加了一个新的变量c',
+        '你打算用它来再次增强a的强度',
+        '是时候看看它的效果了...',
+        'x3 =x3 + a ^ （b + c）'
+      ]
+    },
+    {
+      id: 9,
+      displayId: '2-4',
+      title: '加强公式2',
+      description: '一段关于公式 2 首次改进，以及强化乘法增长的故事。',
+      unlockHint: '解锁条件：公式 2 首次改进',
+      lines: [
+        '随着x2的增长，软上限如其所名',
+        '无声无息的慢慢锁死了公式的增长',
+        '你添加了一个乘数b',
+        '但你知道这只是缓兵之计',
+        '...',
+        'x2 = x2 × ab ÷ 软上限'
+      ]
+    }
+  ];
+})();
+
+
+}
+</script>
+  <script>
+if (window.__FORMULALAB_OFFICIAL_ALLOWED__ === true) {
+
+(function () {
+  'use strict';
+  const game = window.FormulaGame;
+  const storyData = window.FormulaStories || [];
+  if (!game) { document.body.textContent = '游戏加载失败。'; return; }
+  const $ = id => document.getElementById(id);
+  const $$ = selector => Array.from(document.querySelectorAll(selector));
+  const storageGet = (key, fallback) => { try { return localStorage.getItem(key) || fallback; } catch (_) { return fallback; } };
+  const storageSet = (key, value) => { try { localStorage.setItem(key, value); } catch (_) {} };
+  const unlockStorageKey = 'formula-lab-story-unlocks-v1';
+  const seenStorageKey = 'formula-lab-story-seen-v1';
+  const improveStorageKey = 'formula-lab-improvement-unlocked-v1';
+  const metaStorageKey = 'formula-lab-meta-unlocked-v1';
+  // 测试期暂不保存进度：每次打开均清除旧版本遗留记录，避免影响新的开场。
+  function clearStoredGameProgress() {
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('formula-lab-') && key !== 'formula-lab-ui-theme') {
+          localStorage.removeItem(key);
+        }
+      }
+    } catch (_) { /* 无本地存储权限时，内存游戏仍从头开始。 */ }
+  }
+  clearStoredGameProgress();
+  let inspectedFormulaId = 1;
+  let unlocked = new Set([1]);
+  let seen = new Set();
+  let improveUnlocked = false;
+  let metaUnlocked = false;
+  let visitedFormula2 = false;
+  let visitedFormula3 = false;
+  let formulaTwoImproveUnlocked = false;
+  let formulaThreeImproveUnlocked = false;
+  // 此版本暂不读取历史游戏记录；每次重新进入都重播开场并重新解锁。
+  const firstStory = storyData.find(item => item.id === 1);
+  let route = 'formulas';
+  let theme = storageGet('formula-lab-ui-theme', 'dark') === 'light' ? 'light' : 'dark';
+  const developerStorageKey = 'formula-lab-developer-v1';
+  // 开发者选项与存档分离：仅用于测试。硬重置会关闭所有开发者选项。
+  let developer = { enabled: false, speed10: false, pGain10: false, details: false };
+  let developerTapCount = 0;
+  let developerLastTap = 0;
+  const developerTapGap = 1500; // 连续点击之间允许的最长间隔（毫秒）。
+  function clearDeveloperPasswordUI() {
+    developerTapCount = 0;
+    developerLastTap = 0;
+    $('developer-password-panel').hidden = true;
+    $('developer-password-input').value = '';
+    $('developer-password-feedback').textContent = '';
+  }
+  function activateDeveloperModeFromEntry() {
+    if (developer.enabled) {
+      setDeveloperOption('enabled');
+      clearDeveloperPasswordUI();
+      return;
+    }
+    // 密码界面只是外观提示。真正的本地开发入口为连续点击按钮七次。
+    const now = performance.now();
+    if (now - developerLastTap > developerTapGap) developerTapCount = 0;
+    developerLastTap = now;
+    developerTapCount++;
+    if (developerTapCount >= 7) {
+      clearDeveloperPasswordUI();
+      setDeveloperOption('enabled');
+    } else {
+      $('developer-password-panel').hidden = false;
+      $('developer-password-feedback').textContent = '';
+    }
+  }
+  function effectiveTime() {
+    return game.state.time * (developer.enabled && developer.speed10 ? 10 : 1);
+  }
+  function renderDeveloperOptions() {
+    const optionData = [
+      ['developer-mode-toggle', developer.enabled],
+      ['developer-speed-toggle', developer.speed10],
+      ['developer-pgain-toggle', developer.pGain10],
+      ['developer-details-toggle', developer.details]
+    ];
+    for (const [id, active] of optionData) {
+      const button = $(id);
+      button.setAttribute('aria-pressed', String(active));
+      button.textContent = id === 'developer-mode-toggle'
+        ? (active ? '关闭' : '输入密码')
+        : (active ? '开启' : '关闭');
+    }
+    $('developer-options').hidden = !developer.enabled;
+    if (developer.enabled) $('developer-password-panel').hidden = true;
+    $('developer-details').hidden = !(developer.enabled && developer.details);
+    $('developer-effective-time').textContent = formatTime(effectiveTime());
+    $('developer-progress').textContent = '0%';
+  }
+  function setDeveloperOption(key) {
+    // 先结算切换前的经过时间，防止同一段时间被按新倍率错误折算。
+    updateClock();
+    developer[key] = !developer[key];
+    game.setPGainMultiplier(developer.enabled && developer.pGain10 ? 10 : 1);
+    renderDeveloperOptions();
+    render();
+    updateProgress();
+  }
+
+
+  // 单一数值格式：值 > 10000 时使用 x.xxexx，否则最多两位小数。
+  // 大整数与定点货币不经过 Number 转换，以免出现精度损失或溢出。
+  function scientific(whole) {
+    const digits = whole.toString();
+    let exponent = digits.length - 1;
+    let head = digits.slice(0, 5).padEnd(5, '0');
+    let coeff = Math.round(Number(head) / 100) / 100;
+    if (coeff >= 10) { coeff = 1; exponent++; }
+    return coeff.toFixed(2) + 'e' + exponent;
+  }
+  function number(value) { return amount(value); }
+  function amount(value, scale = 1n) {
+    if (value === null) return '极大';
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) return '极大';
+      if (Math.abs(value) > 10000) return value.toExponential(2).replace('e+', 'e');
+      return value.toLocaleString('zh-CN', { maximumFractionDigits: 2 });
+    }
+    let raw = BigInt(value);
+    const negative = raw < 0n;
+    if (negative) raw = -raw;
+    if (raw > 10000n * scale) {
+      const whole = raw / scale;
+      return (negative ? '-' : '') + scientific(whole);
+    }
+    const whole = raw / scale;
+    if (scale === 1n) return (negative ? '-' : '') + whole.toLocaleString('zh-CN');
+    const fract = raw % scale;
+    // 四舍五入两位小数，仅用于显示，不影响实际计算。
+    let cents = (fract * 100n + scale / 2n) / scale;
+    let displayWhole = whole;
+    if (cents >= 100n) { displayWhole++; cents = 0n; }
+    const decimals = String(cents).padStart(2, '0').replace(/0+$/, '');
+    return (negative ? '-' : '') + displayWhole.toLocaleString('zh-CN') + (decimals ? '.' + decimals : '');
+  }
+  function exactAmount(value, scale = 1n) {
+    if (scale === 1n) return value.toString();
+    const whole = value / scale;
+    const remainder = (value % scale).toString().padStart(scale.toString().length - 1, '0').replace(/0+$/, '');
+    return whole + (remainder ? '.' + remainder : '');
+  }
+  function formatTime(value) {
+    if (!Number.isFinite(value)) return '极大';
+    if (Math.abs(value) > 10000) return value.toExponential(2).replace('e+', 'e');
+    return value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  // 将数学式拆成「操作数／操作符」渲染，避免用空格和字体字宽模拟排版。
+  // 公式页与元节点详情共享这一结构，软上限始终整体标红。
+  function equationMarkup(id) {
+    const f = game.formulas[id];
+    const x = '<span class="math-var">x<sub>' + id + '</sub></span>';
+    const term = content => '<span class="eq-term">' + content + '</span>';
+    const op = text => '<span class="eq-op">' + text + '</span>';
+    let right;
+    if (id === 1) right = term('<span class="math-var formula-a">a' + (f?.bUnlocked ? 'b' : '') + '</span>');
+    else if (id === 2) right = term('<span class="math-var formula-a">a' + (f?.bUnlocked ? 'b' : '') + '</span>');
+    else right = term('<span class="math-var formula-a">a<sup>' + (f?.cUnlocked ? 'b + c' : 'b') + '</sup></span>');
+    let expression = term(x) + op('=') + term(x) + op(id === 2 ? '×' : '+') + right;
+    if (id === 2 && f?.softcapActive) {
+      expression += '<span class="eq-softcap softcap-term">' + op('÷') + term('1.1<sup>（log<sub>10</sub>（100 + ' + x + '）−2）</sup>') + '</span>';
+    }
+    return expression;
+  }
+  const originalAFormula = $('upgrade-a-formula').innerHTML;
+  const originalTimeFormula = $('upgrade-time-formula').innerHTML;
+  function render() {
+    const s = game.state;
+    const active = s.activeId;
+    if ($('upgrade-a-formula').dataset.id !== String(active)) {
+      $('upgrade-a-formula').innerHTML = active === 2 ? 'a = 1 + 等级 / 10' : originalAFormula;
+      $('upgrade-time-formula').innerHTML = active === 2
+        ? '时刻 = 0.5 + 0.02 × 等级<sup>1.176</sup>'
+        : originalTimeFormula;
+      $('upgrade-a-formula').dataset.id = String(active);
+    }
+    $('active-x-label').innerHTML = 'x<sub>' + active + '</sub>';
+    const equation = $('current-equation');
+    if (equation.dataset.formula !== String(active) || equation.dataset.b !== String(s.bUnlocked) || equation.dataset.softcap !== String(active === 2 && s.softcapActive) || equation.dataset.c !== String(s.cUnlocked)) {
+      equation.innerHTML = equationMarkup(active);
+      // 公式由原生 DOM 渲染，波纹通过像素级位移贴图作用在完整内容上。
+      waveGeometryDirty = true;
+      equation.dataset.formula = String(active);
+      equation.dataset.b = String(s.bUnlocked);
+      equation.dataset.c = String(s.cUnlocked);
+      equation.dataset.softcap = String(active === 2 && s.softcapActive);
+      equation.classList.toggle('has-softcap', active === 2 && s.softcapActive);
+    }
+    $('value-number').textContent = amount(s.x, s.scale);
+    $('value-number').title = exactAmount(s.x, s.scale);
+    game.recordPeak();
+    $('psi-number').textContent = amount(s.psi, s.psiScale);
+    $('psi-number').title = exactAmount(s.psi, s.psiScale);
+    $('psi-status').hidden = !metaUnlocked;
+    $('param-a').textContent = active === 2 ? amount(game.formulaTwoA(s.aLevel)) : number(s.a);
+    $('param-b-label').hidden = !(s.bUnlocked || active === 3);
+    $('param-b').textContent = number(s.b);
+    $('param-c-label').hidden = !(active === 3 && s.cUnlocked);
+    $('param-c').textContent = active === 3 ? amount(s.c) : '0';
+    // 公式 3 的 b 属于普通升级，但必须在剧情 3-1 的新公式文字出现时解锁。
+    const showThreeB = active === 3 && s.bUpgradeUnlocked;
+    $('formula-three-b-upgrade').hidden = !showThreeB;
+    $('formula-three-b-formula-row').hidden = !showThreeB;
+    if (showThreeB) {
+      $('level-b-three').textContent = 'Lv.' + s.bLevel + ' → Lv.' + (s.bLevel + 1);
+      $('effect-b-three').textContent = '效果 ' + amount(game.formulaThreeB(s.bLevel)) + ' → ' + amount(game.formulaThreeB(s.bLevel + 1));
+      const price = game.costFormulaThreeB();
+      $('cost-b-three').textContent = price === null ? '极大' : amount(price, s.scale);
+      $('buy-b-three').disabled = price === null || price > s.x || s.bLevel >= game.maxLevel;
+    }
+    const showImproveUpgrade = (active === 1 || active === 2) && s.bUnlocked || active === 3 && s.cUnlocked;
+    $('improve-upgrades').hidden = !showImproveUpgrade;
+    $('improve-variable-heading').textContent = active === 3 ? '变量 c' : '变量 b';
+    $('improve-variable-formula-heading').textContent = active === 3 ? '变量 c' : '变量 b';
+    $('b-upgrade-help').setAttribute('aria-label', '长按查看变量 ' + (active === 3 ? 'c' : 'b') + ' 的效果公式');
+    $('improve-modes').hidden = active !== 1 && !(active === 2 && formulaTwoImproveUnlocked) && !(active === 3 && formulaThreeImproveUnlocked);
+    $('other-formula-note').textContent = '当前公式的改进尚未开放。';
+    $('other-formula-note').hidden = active === 1 || (active === 2 && formulaTwoImproveUnlocked) || (active === 3 && formulaThreeImproveUnlocked);
+    // 变量 b 等级说明随改进页面渲染重新创建。
+    const improveLevel = active === 3 ? s.cLevel : s.bLevel;
+    $('level-b').textContent = 'Lv.' + improveLevel + ' → Lv.' + (improveLevel + 1);
+    const bNext = active === 2 ? game.formulaTwoB(s.bLevel + 1)
+      : active === 3 ? game.formulaThreeC(s.cLevel + 1) : s.b + 1n;
+    $('effect-b').textContent = '效果 ' + (active === 3 ? amount(s.c) : number(s.b)) + ' → ' + number(bNext);
+    $('b-effect-formula').textContent = active === 3 ? 'c = 等级 / 10' : active === 2 ? 'b = 1 + 等级 / 10' : 'b = 等级';
+    const bCost = active === 3 ? game.costC() : game.costB();
+    const bCurrency = active === 2 ? s.p2 : active === 3 ? s.p3 : s.p1;
+    $('cost-b').textContent = (bCost === null ? '极大' : amount(bCost, active === 2 || active === 3 ? 1000000000000n : 1n)) + (active === 2 ? ' p₂' : active === 3 ? ' p₃' : ' p₁');
+    $('buy-b').disabled = !(active === 3 ? s.cUnlocked : s.bUnlocked) || bCost === null || bCurrency < bCost || improveLevel >= game.maxLevel;
+    $('param-time').textContent = formatTime(effectiveTime());
+    $('param-time').title = developer.enabled && developer.speed10
+      ? '基础时刻：' + formatTime(s.time) + '；开发者倍率：×10'
+      : String(s.time);
+    if (developer.enabled && developer.details) $('developer-effective-time').textContent = formatTime(effectiveTime());
+    $('level-a').textContent = 'Lv.' + s.aLevel + ' → Lv.' + (s.aLevel + 1);
+    $('level-time').textContent = 'Lv.' + s.timeLevel + ' → Lv.' + (s.timeLevel + 1);
+    $('effect-a').textContent = active === 2
+      ? '效果 ' + amount(game.formulaTwoA(s.aLevel)) + ' → ' + amount(game.formulaTwoA(s.aLevel + 1))
+      : '效果 ' + number(s.a) + ' → ' + number(s.a + 1n);
+    $('effect-time').textContent = '效果 ' + formatTime(s.time) + ' → ' + formatTime(game.timeAtLevel(s.timeLevel + 1));
+    $('p1-number').textContent = number(s.p1);
+    $('p1-number').title = s.p1.toString();
+    // p₁ 只在剧情 2 完整观看之后出现；完成记录保留至硬重置。
+    $('p1-status').hidden = !(improveUnlocked && active === 1);
+    $('p2-number').textContent = amount(s.p2, 1000000000000n);
+    $('p2-number').title = exactAmount(s.p2, 1000000000000n);
+    $('p2-status').hidden = !(formulaTwoImproveUnlocked && active === 2);
+    $('p3-number').textContent = amount(s.p3, 1000000000000n);
+    $('p3-number').title = exactAmount(s.p3, 1000000000000n);
+    $('p3-status').hidden = !(formulaThreeImproveUnlocked && active === 3);
+    const canImprove = active === 1 && s.x >= 1000n
+      || active === 2 && formulaTwoImproveUnlocked && s.x >= 10000000000n * s.scale
+      || active === 3 && formulaThreeImproveUnlocked && s.x >= 10000n * s.scale;
+    $('improve-action').disabled = !canImprove;
+    $('improve-action-reward').hidden = !canImprove;
+    $('improve-reward-currency').innerHTML = 'p<sub>' + active + '</sub>';
+    if (canImprove) {
+      const bonus = developer.enabled && developer.pGain10 ? 10n : 1n;
+      $('reward-preview').textContent = active === 2
+        ? amount(game.improvementRewardTwo() * bonus, 1000000000000n)
+        : active === 3 ? amount(game.improvementRewardThree() * bonus, 1000000000000n)
+        : number(game.improvementReward() * bonus);
+    }
+    if (active === 3) {
+      if ($('conversion-formula').dataset.formula !== '3') {
+        $('improve-reset-note').innerHTML = '需要 <span class="math-var">x<sub>3</sub></span> ≥ 1e4。改进会重置 <span class="math-var">x<sub>3</sub></span>、变量 a、变量 b 和时刻；已获得的 <span class="math-var">p<sub>3</sub></span> 及改进层变量 c 保留。';
+        $('conversion-formula').innerHTML = '<span class="math-var">p<sub>3</sub></span> += 8<sup>（（log<sub>10</sub>（x<sub>3</sub>））<sup>0.9</sup>−4<sup>0.9</sup>）</sup>';
+        $('conversion-formula').dataset.formula = '3';
+      }
+    } else if (active === 2) {
+      if ($('conversion-formula').dataset.formula !== '2') {
+        $('improve-reset-note').innerHTML = '需要 <span class="math-var">x<sub>2</sub></span> ≥ 1e10。改进会重置 <span class="math-var">x<sub>2</sub></span>、变量 a 和时刻；已获得的 <span class="math-var">p<sub>2</sub></span> 保留。';
+        $('conversion-formula').innerHTML = '<span class="math-var">p<sub>2</sub></span> += （log<sub>10</sub>（x<sub>2</sub>）−9）<sup>（1.48 + log<sub>10</sub>（x<sub>2</sub>）÷50）</sup>';
+        $('conversion-formula').dataset.formula = '2';
+      }
+    } else {
+      if ($('conversion-formula').dataset.formula !== (s.bUnlocked ? '1b' : '1')) {
+        $('improve-reset-note').innerHTML = '需要 <span class="math-var">x<sub>1</sub></span> ≥ 1,000。改进会重置 <span class="math-var">x<sub>1</sub></span>、变量 a 和时刻<span id="b-preserve-note"' + (s.bUnlocked ? '' : ' hidden') + '>，变量 b 等级保留</span>。';
+        $('conversion-formula').innerHTML = '<span class="math-var">p<sub>1</sub></span> += 四舍五入（5<sup>（（log<sub>10</sub>（x<sub>1</sub>）−2）<sup>0.9</sup>−1）</sup>）';
+        $('conversion-formula').dataset.formula = s.bUnlocked ? '1b' : '1';
+      }
+    }
+    const costA = game.costA();
+    const costTime = game.costTime();
+    $('cost-a').textContent = (active === 2 ? '÷' : '') + amount(costA, s.scale);
+    $('cost-time').textContent = (active === 2 ? '÷' : '') + amount(costTime, s.scale);
+    $('buy-a').disabled = costA === null || s.x < costA || s.aLevel >= game.maxLevel;
+    $('buy-time').disabled = costTime === null || s.x < costTime || s.timeLevel >= game.maxLevel;
+    updateFormulaNodes();
+    updateImprovePage();
+  }
+  // 先完成前置剧情，才揭示相连剧情的名称；是否可观看仍由原有条件决定。
+  // 节点数字保留，未知标题显示「？」；这样不会提前透露后续剧情。
+  function isStoryDiscovered(id) {
+    if (id === 1 || unlocked.has(id) || seen.has(id)) return true;
+    if (id === 2) return introCompleted;
+    if (id === 3) return seen.has(2);
+    if (id === 4) return seen.has(3);
+    if (id === 5) return seen.has(4);
+    if (id === 6) return seen.has(5);
+    if (id === 7) return seen.has(6);
+    if (id === 8) return seen.has(4);
+    if (id === 9) return seen.has(7);
+    if (id === 10) return seen.has(8); // 剧情 3-2 连接剧情 3-1。
+    if (id === 11) return seen.has(10); // 剧情 3-3 连接剧情 3-2。
+    return false;
+  }
+  function updateTree() {
+    $$('.story-tree-node[data-story-id]').forEach(node => {
+      const id = Number(node.dataset.storyId);
+      const story = storyData.find(item => item.id === id);
+      if (!story) return;
+      const discovered = isStoryDiscovered(id);
+      const locked = !unlocked.has(id);
+      node.classList.toggle('is-locked', locked);
+      node.classList.toggle('is-unknown', !discovered);
+      const label = story.displayId || String(id);
+      node.querySelector('.story-node-index').textContent = discovered ? label : '?';
+      const storyTitle = node.querySelector('.story-node-title');
+      storyTitle.replaceChildren();
+      if (discovered) {
+        const title = document.createElement('span');
+        title.textContent = story.title;
+        if (id === 4) title.className = 'meta-accent';
+        storyTitle.appendChild(title);
+      }
+      node.querySelector('.story-node-title').hidden = !discovered;
+      node.setAttribute('aria-label', !discovered ? '剧情 ' + label + '：未知剧情' :
+        '剧情 ' + label + '：' + story.title + (locked ? '，' + story.unlockHint : '，查看介绍'));
+    });
+  }
+  function unlockEligibleStories() {
+    let changed = false;
+    for (const story of storyData) {
+      const aReady = story.requiredALevel && game.state.aLevel >= story.requiredALevel;
+      const bReady = story.requiredBLevel && game.formulas[1].bUnlocked && game.formulas[1].bLevel >= story.requiredBLevel;
+      const x2Ready = story.requiredX2 && game.isOwned(2) && game.formulas[2].x >= BigInt(story.requiredX2) * game.formulaScale(2);
+      const x3Ready = story.requiredX3 && game.isOwned(3) && game.formulas[3].x >= BigInt(story.requiredX3) * game.formulaScale(3);
+      // 两条分支分别沿自己的前置剧情推进，不允许跨分支提前解锁。
+      const prerequisiteReady = story.id === 6 ? seen.has(5) : story.id === 7 ? seen.has(6)
+        : story.id === 10 ? seen.has(8) : true;
+      if ((aReady || bReady || x2Ready || x3Ready) && prerequisiteReady && !unlocked.has(story.id)) {
+        unlocked.add(story.id);
+        changed = true;
+      }
+    }
+    if (changed) {
+      updateTree();
+    }
+    // 满足新剧情条件后自动进入；如果此刻正在播放其他剧情，就在其结束后播放。
+    tryAutoplayStory();
+  }
+  function applyTheme() {
+    document.body.dataset.theme = theme;
+    $$('[data-theme-choice]').forEach(button => {
+      const active = button.dataset.themeChoice === theme;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = theme === 'dark' ? '#10141b' : '#f6f7f9';
+  }
+  // 页面转场使用 Web Animations API：出场与入场共用同一时间线。
+  // 退场页保留 is-visible，直至动画完成，以免剧情等页面的 flex 布局中途改变。
+  const pageOrder = ['formulas', 'improve', 'meta', 'story', 'settings'];
+  const pageDuration = 420;
+  let pageMotion = [];
+  let pageMotionToken = 0;
+  const pageReduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+
+  function navigate(next) {
+    if (!pageOrder.includes(next) ||
+        (next === 'improve' && !improveUnlocked) ||
+        (next === 'meta' && !metaUnlocked) || route === next) return;
+    releaseUpgradeHold?.();
+    releaseImproveHold?.();
+    releaseBUpgradeHold?.();
+    const previousRoute = route;
+    const pages = $$('[data-page]');
+    const previous = pages.find(page => page.dataset.page === previousRoute);
+    const incoming = pages.find(page => page.dataset.page === next);
+    if (!incoming) return;
+
+    const direction = pageOrder.indexOf(next) > pageOrder.indexOf(previousRoute) ? 1 : -1;
+    const reducedMotion = Boolean(pageReduceMotion?.matches);
+    const token = ++pageMotionToken;
+    // 读取当前变换后才取消旧动画，快速连续点击不会把页面重置到中间状态。
+    const visibleSnapshot = new Map();
+    for (const page of pages) {
+      if (!page.hidden) {
+        const style = getComputedStyle(page);
+        visibleSnapshot.set(page, { transform: style.transform, opacity: style.opacity });
+      }
+    }
+    for (const animation of pageMotion) animation.cancel();
+    pageMotion = [];
+    for (const page of pages) {
+      if (page !== previous && page !== incoming) {
+        page.hidden = true;
+        page.classList.remove('is-visible', 'is-entering', 'is-exiting');
+      }
+    }
+    route = next;
+    incoming.hidden = false;
+    incoming.classList.add('is-visible');
+    incoming.classList.remove('is-exiting', 'is-entering');
+
+    if (previous && previous !== incoming && !reducedMotion &&
+        typeof previous.animate === 'function' && typeof incoming.animate === 'function') {
+      previous.hidden = false;
+      previous.classList.add('is-visible', 'is-exiting');
+      previous.classList.remove('is-entering');
+      incoming.classList.add('is-entering');
+      const oldStart = visibleSnapshot.get(previous) || { transform: 'none', opacity: '1' };
+      const nextStart = visibleSnapshot.get(incoming);
+      const exitDistance = -direction * 100;
+      const entryDistance = direction * 100;
+      const easing = 'cubic-bezier(.45, 0, .55, 1)';
+      const options = { duration: pageDuration, easing, fill: 'both' };
+      const outgoingMotion = previous.animate([
+        { transform: oldStart.transform === 'none' ? 'translate3d(0,0,0)' : oldStart.transform, opacity: Number(oldStart.opacity) },
+        { transform: `translate3d(${exitDistance}%,0,0)`, opacity: .35 }
+      ], options);
+      const incomingMotion = incoming.animate([
+        { transform: nextStart?.transform && nextStart.transform !== 'none' ? nextStart.transform : `translate3d(${entryDistance}%,0,0)`, opacity: nextStart ? Number(nextStart.opacity) : .85 },
+        { transform: 'translate3d(0,0,0)', opacity: 1 }
+      ], options);
+      pageMotion = [outgoingMotion, incomingMotion];
+      incomingMotion.finished.then(() => {
+        if (token !== pageMotionToken) return;
+        // 先完成动画，再清理可见性；不通过固定 setTimeout 抢先隐藏退场页。
+        outgoingMotion.cancel();
+        incomingMotion.cancel();
+        pageMotion = [];
+        previous.hidden = true;
+        previous.classList.remove('is-visible', 'is-exiting');
+        incoming.classList.remove('is-entering');
+      }).catch(() => { /* 被下一次导航取消，清理由下一次导航完成。 */ });
+    } else {
+      if (previous && previous !== incoming) {
+        previous.hidden = true;
+        previous.classList.remove('is-visible', 'is-entering', 'is-exiting');
+      }
+      incoming.classList.remove('is-entering', 'is-exiting');
+    }
+    $$('[data-route]').forEach(button => {
+      const active = button.dataset.route === next;
+      button.classList.toggle('is-active', active);
+      if (active) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+    });
+    // 避免长页面滚动状态影响短页面；切换不触发平滑滚动。
+    try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }
+    catch (_) { document.documentElement.scrollTop = 0; document.body.scrollTop = 0; }
+  }
+
+  // 公式 2 在尚未看完剧情 2-3、未解锁改进时，不显示「改进」标签。
+  // 公式 1 按原有解锁逻辑显示；其它公式保留此前的行为。
+  let lastImproveNavigationVisibility = null;
+  function updateImprovePage() {
+    const visible = improveUnlocked && (game.state.activeId === 1 ||
+      (game.state.activeId === 2 && formulaTwoImproveUnlocked) ||
+      (game.state.activeId === 3 && formulaThreeImproveUnlocked));
+    if (visible !== lastImproveNavigationVisibility) {
+      $$('[data-route="improve"]').forEach(button => { button.hidden = !visible; });
+      lastImproveNavigationVisibility = visible;
+    }
+    if (!visible && route === 'improve') navigate('formulas');
+  }
+  function unlockImprovement() {
+    if (improveUnlocked) return;
+    improveUnlocked = true;
+    updateImprovePage();
+  }
+  function updateMetaPage() {
+    $$('[data-route="meta"]').forEach(button => { button.hidden = !metaUnlocked; });
+    $('psi-status').hidden = !metaUnlocked;
+    if (!metaUnlocked && route === 'meta') navigate('formulas');
+  }
+  function formulaDescription(id) {
+    if (id === 1) return game.formulas[1].bUnlocked ? 'x₁ = x₁ + ab' : 'x₁ = x₁ + a';
+    if (id === 2) return 'x₂ = x₂ × ' + (game.formulas[2]?.bUnlocked ? 'ab' : 'a') + (game.formulas[2]?.softcapActive ? ' ÷ 1.1^(log₁₀(100+x₂)−2)' : '');
+    return 'x₃ = x₃ + a^' + (game.formulas[3]?.cUnlocked ? '(b+c)' : 'b');
+  }
+  function updateFormulaNodes() {
+    for (const id of [1, 2, 3]) {
+      const node = $('meta-formula-node-' + id);
+      const owned = game.isOwned(id);
+      const running = game.state.activeId === id;
+      node.classList.toggle('is-owned', owned);
+      node.classList.toggle('is-locked', !owned);
+      node.classList.toggle('is-running', running);
+      if (running) node.setAttribute('aria-current', 'true');
+      else node.removeAttribute('aria-current');
+      node.setAttribute('aria-label', '公式 ' + id + (running ? '，正在进行' : owned ? '，可前往' : '，未解锁'));
+    }
+  }
+  function openMetaFormula(id) {
+    if (![1, 2, 3].includes(id)) return;
+    inspectedFormulaId = id;
+    $('meta-formula-title').textContent = '公式 ' + id;
+    $('meta-formula-current').innerHTML = equationMarkup(id);
+    $('meta-formula-current').classList.toggle('has-softcap', id === 2 && !!game.formulas[2]?.softcapActive);
+    const owned = game.isOwned(id);
+    const running = game.state.activeId === id;
+    const requirement = game.requiredPsi(id);
+    const canEnter = owned || game.state.psi >= requirement * game.state.psiScale;
+    $('meta-formula-hint').textContent = owned ? (running ? '这是当前正在运行的公式。' : '已解锁，可切换研究。')
+      : '解锁条件：Ψ ≥ ' + number(requirement) + '。' + (canEnter ? '已满足条件。' : '尚未满足条件。');
+    const action = $('meta-formula-action');
+    action.textContent = running ? '正在进行' : canEnter ? '前往' : '未解锁';
+    action.disabled = running || !canEnter;
+    openAnimatedDialog('meta-formula-dialog');
+  }
+  function goToInspectedFormula() {
+    const id = inspectedFormulaId;
+    if (!game.isOwned(id) && !game.unlockFormula(id)) {
+      openMetaFormula(id);
+      return;
+    }
+    updateClock();
+    game.selectFormula(id);
+    progress = 0;
+    lastTime = performance.now();
+    resyncProgressMotion();
+    updateProgress();
+    closeAnimatedDialog('meta-formula-dialog');
+    render();
+    // 改变当前公式后只保留该公式运作，其它公式的数值与等级原样冻结。
+    navigate('formulas');
+    if (id === 2 && !visitedFormula2) {
+      visitedFormula2 = true;
+      unlocked.add(5);
+      updateTree();
+      tryAutoplayStory();
+    }
+    if (id === 3 && !visitedFormula3) {
+      visitedFormula3 = true;
+      unlocked.add(8);
+      updateTree();
+      tryAutoplayStory();
+    }
+  }
+  function selectMetaTab(tab) {
+    if (tab !== 'unlock' && tab !== 'upgrades') return;
+    $$('[data-meta-tab]').forEach(button => {
+      const selected = button.dataset.metaTab === tab;
+      button.classList.toggle('is-active', selected);
+      button.setAttribute('aria-selected', String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    });
+    $('meta-panel-unlock').hidden = tab !== 'unlock';
+    $('meta-panel-upgrades').hidden = tab !== 'upgrades';
+  }
+  function selectSettingsTab(tab) {
+    if (tab !== 'general' && tab !== 'about') return;
+    $$('[data-settings-tab]').forEach(button => {
+      const selected = button.dataset.settingsTab === tab;
+      button.classList.toggle('is-active', selected);
+      button.setAttribute('aria-selected', String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    });
+    $('settings-panel-general').hidden = tab !== 'general';
+    $('settings-panel-about').hidden = tab !== 'about';
+  }
+  function unlockMeta() {
+    if (metaUnlocked) return;
+    metaUnlocked = true;
+    updateMetaPage();
+    render();
+  }
+  function markStorySeen(id) {
+    if (id === 1 || seen.has(id)) return; // 开场随无存档的新游戏重复播出
+    seen.add(id);
+    if (id === 2) render();
+    if (id === 4) unlockMeta();
+    if (id === 7) { formulaTwoImproveUnlocked = true; render(); }
+    if (id === 10) { formulaThreeImproveUnlocked = true; updateImprovePage(); render(); }
+    updateTree();
+  }
+  // 首次剧情 1 未完全结束时，公式计时被锁定。重看剧情不影响计时。
+  let introCompleted = false;
+  let clockEnabled = false;
+  let clockPausedByStory = false;
+  function tryAutoplayStory() {
+    if (!introCompleted || storyPlaying || storyClosing) return;
+    const next = storyData.find(story => story.id !== 1 && unlocked.has(story.id) && !seen.has(story.id) && story.lines.length);
+    if (next) startStory(next.id);
+  }
+
+  const storyOverlay = $('story-overlay');
+  const storyStage = $('story-stage');
+  const storyLineElements = [];
+  const storyInterval = 1900;
+  const storyTransitionMs = 1000;
+  let storyPlaying = false;
+  let activeStoryId = null;
+  let storyClosing = false;
+  let revealedLines = 0;
+  let nextLineTimer = null;
+  let closeFallback = null;
+  let closeListener = null;
+  let introCleanupTimer = null;
+  let storyGeneration = 0;
+  function clearStoryPlayback() {
+    storyGeneration++;
+    cancelStoryTimer();
+    if (closeFallback !== null) clearTimeout(closeFallback);
+    if (closeListener) storyOverlay.removeEventListener('transitionend', closeListener);
+    if (introCleanupTimer !== null) clearTimeout(introCleanupTimer);
+    closeFallback = null;
+    closeListener = null;
+    introCleanupTimer = null;
+    storyPlaying = false;
+    storyClosing = false;
+    activeStoryId = null;
+    clockPausedByStory = false;
+    revealedLines = 0;
+    storyLineElements.length = 0;
+    storyOverlay.classList.remove('is-visible');
+    storyOverlay.hidden = true;
+    document.documentElement.classList.remove('story-boot', 'story-intro');
+  }
+
+  function cancelStoryTimer() {
+    if (nextLineTimer !== null) clearTimeout(nextLineTimer);
+    nextLineTimer = null;
+  }
+  function scheduleStoryLine(delay = storyInterval) {
+    cancelStoryTimer();
+    if (storyPlaying && !storyClosing && revealedLines < storyLineElements.length && !document.hidden) {
+      nextLineTimer = setTimeout(revealNextStoryLine, delay);
+    }
+  }
+  function revealNextStoryLine() {
+    if (!storyPlaying || storyClosing || revealedLines >= storyLineElements.length) return;
+    const line = storyLineElements[revealedLines++];
+    line.classList.add('is-revealed');
+    line.setAttribute('aria-hidden', 'false');
+    // 新内容在对应的剧情文字刚出现时生效，不延迟到剧情结束之后。
+    // 剧情 1-3：第四行「你加入了b」；剧情 2-4：第三行「你添加了一个乘数b」。
+    if (activeStoryId === 11 && revealedLines === 1 && game.unlockFormulaThreeC()) render();
+    if (activeStoryId === 3 && revealedLines === 4) {
+      game.unlockB();
+      render();
+    }
+    if (activeStoryId === 9 && revealedLines === 3) {
+      game.unlockFormulaTwoB();
+      render();
+    }
+    // 剧情 2-2：第三行宣布公式发生变化，软上限同步生效。
+    if (activeStoryId === 6 && revealedLines === 3 && game.activateFormulaTwoSoftcap()) render();
+    // 解锁提示出现的同一刻开放对应资源与页面。
+    if (revealedLines === storyLineElements.length) {
+      if (activeStoryId === 2) { unlockImprovement(); render(); }
+      if (activeStoryId === 4) unlockMeta();
+      if (activeStoryId === 7) { formulaTwoImproveUnlocked = true; updateImprovePage(); render(); }
+      if (activeStoryId === 10) { formulaThreeImproveUnlocked = true; updateImprovePage(); render(); }
+      // 剧情 3-1 的最后一行出现公式 3，随即开放它的 b 参数升级。
+      if (activeStoryId === 8 && game.unlockFormulaThreeB()) render();
+    }
+    $('story-tip').textContent = revealedLines === storyLineElements.length ? '点击结束剧情' : '点击显示下一行';
+    scheduleStoryLine();
+  }
+  function finishClose() {
+    if (!storyClosing) return;
+    if (closeFallback !== null) clearTimeout(closeFallback);
+    if (closeListener) storyOverlay.removeEventListener('transitionend', closeListener);
+    closeFallback = null;
+    closeListener = null;
+    storyOverlay.hidden = true;
+    const finishedId = activeStoryId;
+    storyPlaying = false;
+    storyClosing = false;
+    activeStoryId = null;
+    if (introCleanupTimer !== null) {
+      clearTimeout(introCleanupTimer);
+      introCleanupTimer = null;
+      document.documentElement.classList.remove('story-intro');
+    }
+    if (finishedId !== null) markStorySeen(finishedId);
+    // 初次播放的剧情 1 完全退出后，才允许第一次增长。
+    if (finishedId === 1 && !introCompleted) {
+      introCompleted = true;
+      // 点击结束时已恢复计时，不在淡出结束时再次清零或漏算。
+      updateTree(); // 初次开场完整结束，剧情 2 从「？」变为已发现名称。
+    }
+    const target = document.querySelector('[data-route="' + route + '"]');
+    if (target) target.focus({ preventScroll: true });
+    unlockEligibleStories();
+  }
+  function closeStory() {
+    if (!storyPlaying || storyClosing) return;
+    cancelStoryTimer();
+    storyClosing = true;
+    // 首次剧情在玩家点击“结束剧情”时恢复计时，而不是等待淡出动画。
+    if (clockPausedByStory) {
+      clockPausedByStory = false;
+      lastTime = performance.now();
+      clockEnabled = true;
+      resyncProgressMotion();
+      updateProgress();
+    }
+    closeListener = event => {
+      if (event.target === storyOverlay && event.propertyName === 'opacity') finishClose();
+    };
+    storyOverlay.addEventListener('transitionend', closeListener);
+    storyOverlay.classList.remove('is-visible');
+    closeFallback = setTimeout(finishClose, storyTransitionMs + 150);
+  }
+  function startStory(id, initial = false) {
+    const story = storyData.find(item => item.id === id);
+    if (!story || storyPlaying || !unlocked.has(id) || !story.lines.length) return;
+    cancelStoryTimer();
+    const firstViewing = id === 1 ? !introCompleted : !seen.has(id);
+    if (firstViewing) {
+      // 用进入剧情前的时间结清上一段时刻，暂停时不允许累积或补算。
+      if (!clockUpdateInProgress) updateClock();
+      clockEnabled = false;
+      clockPausedByStory = true;
+      lastTime = performance.now();
+      resyncProgressMotion();
+      updateProgress();
+    } else {
+      clockPausedByStory = false;
+    }
+    const generation = ++storyGeneration;
+    activeStoryId = id;
+    revealedLines = 0;
+    storyLineElements.length = 0;
+    $('story-lines').replaceChildren();
+    for (const [index, content] of story.lines.entries()) {
+      const line = document.createElement('span');
+      line.className = 'story-line';
+      if (id === 2) {
+        // 强调剧情 2 所有「改进」文字，无需注入 HTML 字符串。
+        const pieces = content.split('改进');
+        pieces.forEach((piece, pieceIndex) => {
+          if (pieceIndex) {
+            const strong = document.createElement('strong');
+            strong.textContent = '改进';
+            line.appendChild(strong);
+          }
+          line.appendChild(document.createTextNode(piece));
+        });
+      } else if (id === 11 && index === story.lines.length - 1) {
+        line.classList.add('story-equation-line');
+        line.innerHTML = '<span class="math-var">x<sub>3</sub></span> = <span class="math-var">x<sub>3</sub></span> + a<sup>（b + c）</sup>';
+      } else if (id === 9 && index === story.lines.length - 1) {
+        // 最后一行的软上限使用统一红色，公式本体使用正常文字颜色。
+        // 保留内容中的 x₂ 下标，不把未经处理的剧情文字作为 HTML 插入。
+        line.classList.add('story-equation-line');
+        const regular = document.createElement('span');
+        regular.innerHTML = '<span class="math-var">x<sub>2</sub></span> = <span class="math-var">x<sub>2</sub></span> × ab ';
+        const softcap = document.createElement('span');
+        softcap.className = 'story-equation-softcap';
+        softcap.textContent = '÷ 软上限';
+        line.append(regular, softcap);
+      } else {
+        line.textContent = content;
+      }
+      if ((id === 2 || id === 4) && index === story.lines.length - 1) line.classList.add('story-unlock-line');
+      if (id === 4 && index === story.lines.length - 1) line.classList.add('story-meta-unlock');
+      if (id === 6 && index === story.lines.length - 1) line.classList.add('story-softcap-unlock');
+      if ((id === 7 || id === 10) && index === story.lines.length - 1) line.classList.add('story-unlock-line');
+      line.setAttribute('aria-hidden', 'true');
+      $('story-lines').appendChild(line);
+      storyLineElements.push(line);
+    }
+    $('story-tip').textContent = '点击显示下一行';
+    storyOverlay.setAttribute('aria-label', '剧情：' + story.title);
+    storyOverlay.hidden = false;
+    storyPlaying = true;
+    storyClosing = false;
+    if (initial) {
+      // 首帧仅显示深色空背景，不闪出游戏页。随后在 1 秒内逐渐变黑。
+      // 在完成淡入之前隐藏底层游戏界面；初次剧情结束后才启动公式。
+      storyOverlay.classList.remove('is-visible');
+      // 无需强制读取 offsetWidth：避免 WebView 启动时发生同步布局卡顿。
+      document.documentElement.classList.add('story-intro');
+      document.documentElement.classList.remove('story-boot');
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (storyGeneration === generation && storyPlaying && !storyClosing) storyOverlay.classList.add('is-visible');
+      }));
+      if (introCleanupTimer !== null) clearTimeout(introCleanupTimer);
+      introCleanupTimer = setTimeout(() => {
+        if (storyGeneration === generation) document.documentElement.classList.remove('story-intro');
+        introCleanupTimer = null;
+      }, storyTransitionMs + 100);
+    } else {
+      // 重看时，从透明覆盖层用 GPU opacity 单独进行整整 1 秒的淡入。
+      storyOverlay.classList.remove('is-visible');
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (storyGeneration === generation && storyPlaying && !storyClosing) storyOverlay.classList.add('is-visible');
+      }));
+    }
+    storyStage.focus({ preventScroll: true });
+    scheduleStoryLine(storyTransitionMs);
+  }
+  function advanceStory() {
+    if (!storyPlaying || storyClosing) return;
+    if (revealedLines < storyLineElements.length) revealNextStoryLine();
+    else closeStory();
+  }
+  // 长按问号查看数学表达式，松开即以透明度渐变恢复。支持触屏、鼠标、键盘。
+  function installFormulaHold(buttonId, panelId) {
+    const button = $(buttonId);
+    const panel = $(panelId);
+    let timer = null;
+    let pressed = false;
+    const show = () => {
+      if (!pressed) return;
+      panel.classList.add('is-formula-mode');
+      panel.querySelector('.mode-normal')?.setAttribute('aria-hidden', 'true');
+      panel.querySelector('.mode-formula')?.setAttribute('aria-hidden', 'false');
+      if (panelId === 'improve-modes') fitConversionFormula();
+    };
+    const begin = () => {
+      if (pressed) return;
+      pressed = true;
+      timer = setTimeout(show, 350);
+    };
+    const end = () => {
+      pressed = false;
+      if (timer !== null) clearTimeout(timer);
+      timer = null;
+      panel.classList.remove('is-formula-mode');
+      panel.querySelector('.mode-normal')?.removeAttribute('aria-hidden');
+      panel.querySelector('.mode-formula')?.setAttribute('aria-hidden', 'true');
+    };
+    button.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      begin();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'pointerleave', 'blur']) button.addEventListener(type, end);
+    button.addEventListener('contextmenu', e => e.preventDefault());
+    button.addEventListener('click', e => e.preventDefault());
+    button.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); begin(); }
+    });
+    button.addEventListener('keyup', e => {
+      if (e.key === ' ' || e.key === 'Enter') end();
+    });
+    // 避免在按住问号时切换页面后仍残留公式模式。
+    return end;
+  }
+  function fitConversionFormula() {
+    const container = $('conversion-math');
+    const formula = $('conversion-formula');
+    if (!container || !formula) return;
+    formula.style.transform = 'none';
+    const available = container.clientWidth - 6;
+    const natural = formula.scrollWidth;
+    const ratio = natural > 0 ? Math.min(1, available / natural) : 1;
+    formula.style.transform = `scale(${Math.max(0.1, ratio)})`;
+  }
+  window.addEventListener('resize', fitConversionFormula);
+  const releaseUpgradeHold = installFormulaHold('upgrade-help', 'upgrades-modes');
+  const releaseImproveHold = installFormulaHold('improve-help', 'improve-modes');
+  const releaseBUpgradeHold = installFormulaHold('b-upgrade-help', 'b-upgrade-modes');
+  storyStage.addEventListener('click', advanceStory);
+  function openStoryInfo(id) {
+    const story = storyData.find(item => item.id === id);
+    if (!story) return;
+    const discovered = isStoryDiscovered(id);
+    const canView = discovered && unlocked.has(id) && story.lines.length > 0;
+    $('story-info-number').textContent = '剧情 ' + (story.displayId || id);
+    const infoTitle = $('story-info-title');
+    infoTitle.replaceChildren();
+    const titleSpan = document.createElement('span');
+    titleSpan.textContent = !discovered ? '？' : unlocked.has(id) ? story.title : '未解锁';
+    if (id === 4 && discovered && unlocked.has(id)) titleSpan.className = 'meta-accent';
+    infoTitle.appendChild(titleSpan);
+    $('story-info-description').textContent = !discovered ? '请先完成相连的前置剧情。' : !unlocked.has(id)
+      ? story.unlockHint
+      : story.lines.length ? story.description : '剧情内容尚未添加';
+    $('replay-story').hidden = !canView;
+    $('replay-story').dataset.storyId = String(id);
+    showStoryInfo();
+  }
+
+  // 剧情介绍弹窗：背景与卡片同步淡入、淡出；等关闭动画结束后再播放剧情。
+  // 所有普通弹窗与遮罩统一使用淡入淡出，关闭后才执行后续操作。
+  const animatedDialogIds = ['reset-dialog', 'meta-help-dialog', 'meta-formula-dialog'];
+  const closingDialogs = new Set();
+  function openAnimatedDialog(id) {
+    const dialog = $(id);
+    if (!dialog || dialog.open || closingDialogs.has(id)) return;
+    dialog.showModal();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (dialog.open && !closingDialogs.has(id)) dialog.classList.add('is-open');
+    }));
+  }
+  function closeAnimatedDialog(id, afterClose) {
+    const dialog = $(id);
+    if (!dialog?.open || closingDialogs.has(id)) return;
+    closingDialogs.add(id);
+    dialog.classList.remove('is-open');
+    let finished = false;
+    let timer;
+    const end = event => {
+      if (!event || event.target === dialog && event.propertyName === 'opacity') done();
+    };
+    const done = () => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      dialog.removeEventListener('transitionend', end);
+      if (dialog.open) dialog.close();
+      closingDialogs.delete(id);
+      if (afterClose) afterClose();
+    };
+    dialog.addEventListener('transitionend', end);
+    timer = setTimeout(done, 280);
+  }
+  animatedDialogIds.forEach(id => {
+    const dialog = $(id);
+    dialog.classList.add('ui-animated-dialog');
+    dialog.addEventListener('cancel', event => {
+      event.preventDefault();
+      closeAnimatedDialog(id);
+    });
+    dialog.addEventListener('click', event => {
+      if (event.target !== dialog) return;
+      const rect = dialog.getBoundingClientRect();
+      if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)
+        closeAnimatedDialog(id);
+    });
+  });
+
+  const storyInfoDialog = $('story-info-dialog');
+  let storyInfoClosing = false;
+  let storyInfoTimer = null;
+  function showStoryInfo() {
+    if (storyInfoDialog.open || storyInfoClosing) return;
+    storyInfoDialog.showModal();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (storyInfoDialog.open && !storyInfoClosing) storyInfoDialog.classList.add('is-open');
+    }));
+  }
+  function hideStoryInfo(afterClose) {
+    if (!storyInfoDialog.open || storyInfoClosing) return;
+    storyInfoClosing = true;
+    storyInfoDialog.classList.remove('is-open');
+    let finished = false;
+    const done = () => {
+      if (finished) return;
+      finished = true;
+      if (storyInfoTimer !== null) clearTimeout(storyInfoTimer);
+      storyInfoTimer = null;
+      storyInfoDialog.removeEventListener('transitionend', onEnd);
+      storyInfoDialog.close();
+      storyInfoClosing = false;
+      if (afterClose) afterClose();
+    };
+    const onEnd = event => {
+      if (event.target === storyInfoDialog && event.propertyName === 'opacity') done();
+    };
+    storyInfoDialog.addEventListener('transitionend', onEnd);
+    storyInfoTimer = setTimeout(done, 300);
+  }
+  storyInfoDialog.addEventListener('cancel', event => {
+    event.preventDefault();
+    hideStoryInfo();
+  });
+
+  // 剧情树拖动：只移动节点容器，不移动整页；在视口内限制最大拖动距离。
+  const storyTree = $('story-tree');
+  const storyTrack = storyTree.querySelector('.story-track');
+  let treeX = 0, treeY = 0;
+  let treePointer = null;
+  let suppressTreeClick = false;
+  function treeLimits() {
+    const width = storyTree.clientWidth;
+    const height = storyTree.clientHeight;
+    const trackHeight = storyTrack.offsetHeight;
+    return {
+      x: Math.min(72, Math.max(16, (width - 150) / 3)),
+      up: Math.min(110, Math.max(30, height - 120)),
+      down: Math.max(30, trackHeight - height + 28)
+    };
+  }
+  function setTreeOffset(x, y) {
+    const limit = treeLimits();
+    treeX = Math.max(-limit.x, Math.min(limit.x, x));
+    treeY = Math.max(-limit.up, Math.min(limit.down, y));
+    storyTrack.style.transform = `translate3d(${treeX}px, ${treeY}px, 0)`;
+  }
+  storyTree.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    treePointer = { id: event.pointerId, x: event.clientX, y: event.clientY, baseX: treeX, baseY: treeY, moved: false };
+  });
+  storyTree.addEventListener('pointermove', event => {
+    if (!treePointer || event.pointerId !== treePointer.id) return;
+    const dx = event.clientX - treePointer.x;
+    const dy = event.clientY - treePointer.y;
+    if (!treePointer.moved && Math.hypot(dx, dy) <= 7) return;
+    if (!treePointer.moved) {
+      treePointer.moved = true;
+      if (storyTree.setPointerCapture) storyTree.setPointerCapture(event.pointerId);
+    }
+    event.preventDefault();
+    setTreeOffset(treePointer.baseX + dx, treePointer.baseY + dy);
+  });
+  function stopTreeDrag(event) {
+    if (!treePointer || event.pointerId !== treePointer.id) return;
+    const moved = treePointer.moved;
+    treePointer = null;
+    if (storyTree.hasPointerCapture?.(event.pointerId)) storyTree.releasePointerCapture(event.pointerId);
+    if (moved) {
+      suppressTreeClick = true;
+      setTimeout(() => { suppressTreeClick = false; }, 180);
+    }
+  }
+  storyTree.addEventListener('pointerup', stopTreeDrag);
+  storyTree.addEventListener('pointercancel', stopTreeDrag);
+  storyTree.addEventListener('click', event => {
+    if (!suppressTreeClick) return;
+    suppressTreeClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+  }, true);
+  storyTree.addEventListener('wheel', event => {
+    event.preventDefault();
+    setTreeOffset(treeX - event.deltaX * 0.5, treeY - event.deltaY * 0.5);
+  }, { passive: false });
+  storyTree.addEventListener('keydown', event => {
+    const moves = { ArrowUp: [0, -30], ArrowDown: [0, 30], ArrowLeft: [-30, 0], ArrowRight: [30, 0] };
+    if (!moves[event.key] || event.target !== storyTree) return;
+    event.preventDefault();
+    setTreeOffset(treeX + moves[event.key][0], treeY + moves[event.key][1]);
+  });
+  window.addEventListener('resize', () => setTreeOffset(treeX, treeY));
+
+  // 每段剧情首次播放时暂停公式计时，点击“结束剧情”才恢复；手动重看不中断运行。
+  // WebView 暂停后在恢复时补算正常运行时刻；仍不保存离线存档。
+  let lastTime = performance.now();
+  let progress = 0;
+  const progressFill = $('tick-progress-fill');
+  const progressTrack = $('tick-progress');
+  let displayedProgressPercent = -1;
+  let lastProgressTransform = -1;
+  let lastNumberRender = 0;
+  let pendingNumberRender = false;
+  // 单独由浏览器合成线程驱动时刻条。主线程短暂忙碌时，视觉进度仍可匀速前进。
+  // 仅在速度变化、暂停/继续、切换公式或手动推进时重新同步动画相位。
+  const hasCompositorProgress = typeof progressFill.animate === 'function';
+  let progressMotion = null;
+  let motionSpeed = -1;
+  let motionRunning = false;
+  let motionResync = true;
+  function resyncProgressMotion() { motionResync = true; }
+  function updateProgress() {
+    const normalized = Math.min(Math.max(progress, 0), 1);
+    const speed = effectiveTime();
+    const running = !!clockEnabled && !document.hidden && Number.isFinite(speed) && speed > 0;
+    if (hasCompositorProgress && speed > 0 && Number.isFinite(speed)) {
+      const period = 1000 / speed;
+      const changed = !progressMotion || Math.abs(motionSpeed - speed) > 1e-8;
+      if (changed) {
+        if (progressMotion) progressMotion.cancel();
+        progressFill.style.transform = '';
+        progressMotion = progressFill.animate(
+          [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }],
+          { duration: Math.max(16, period), iterations: Infinity, easing: 'linear' });
+        motionSpeed = speed;
+        motionResync = true;
+        motionRunning = true;
+      }
+      if (motionResync) {
+        // 同步相位时只写一次时间，避免每帧重置引起进度条断续。
+        progressMotion.currentTime = normalized * Math.max(16, period);
+        motionResync = false;
+      }
+      if (running !== motionRunning) {
+        if (running) progressMotion.play();
+        else progressMotion.pause();
+        motionRunning = running;
+      }
+    } else {
+      // 旧版 WebView 的兼容后备：无需依赖 WAAPI。
+      if (Math.abs(normalized - lastProgressTransform) > 0.0001) {
+        progressFill.style.transform = 'scaleX(' + normalized.toFixed(5) + ')';
+        lastProgressTransform = normalized;
+      }
+    }
+    const percent = Math.floor(normalized * 100);
+    if (percent !== displayedProgressPercent) {
+      displayedProgressPercent = percent;
+      progressTrack.setAttribute('aria-valuenow', String(percent));
+      if (developer.enabled && developer.details) $('developer-progress').textContent = percent + '%';
+    }
+  }
+  // 自动剧情必须在达到条件的同一时刻触发，而不能等待每 500 毫秒的剧情检查。
+  // 否则高时刻速度可能跨过阈值继续增长，造成“剧情播放时仍在运行”的错觉。
+  let clockUpdateInProgress = false;
+  function advanceAndCheckStory(steps) {
+    const active = game.state.activeId;
+    // 只在尚未到达剧情门槛且前置剧情已完成时启用逐时刻检测。
+    // 其它情形一次批量运行，避免长时间运行时的额外开销。
+    const pendingTwo = active === 2 && ((!seen.has(6) && seen.has(5)) || (!seen.has(7) && seen.has(6)));
+    const pendingThree = active === 3 && !seen.has(10) && seen.has(8);
+    if (!pendingTwo && !pendingThree) {
+      game.advance(steps);
+      return steps;
+    }
+    for (let count = 0; count < steps; count++) {
+      game.advance(1);
+      const target = active === 3 ? 10
+        : !seen.has(6) && seen.has(5) ? 6 : !seen.has(7) && seen.has(6) ? 7 : null;
+      if (target !== null) {
+        const threshold = BigInt(target === 6 ? 100 : target === 7 ? 10000000000 : 10000) * game.formulaScale(active);
+        if (game.formulas[active].x >= threshold) {
+          unlockEligibleStories();
+          if (!clockEnabled) return count + 1;
+        }
+      }
+    }
+    return steps;
+  }
+  function updateClock() {
+    if (clockUpdateInProgress) return;
+    clockUpdateInProgress = true;
+    try {
+      const now = performance.now();
+      const elapsed = Math.max(0, (now - lastTime) / 1000);
+      lastTime = now;
+      if (!clockEnabled || elapsed <= 0) return;
+      progress += elapsed * effectiveTime();
+      const steps = Math.floor(progress);
+      if (steps >= 1 && Number.isSafeInteger(steps)) {
+        progress -= steps;
+        const executed = advanceAndCheckStory(steps);
+        if (executed < steps) progress = 0; // 剧情暂停期间不保留尚未执行的时刻。
+        pendingNumberRender = true;
+      }
+      if (pendingNumberRender && (now - lastNumberRender >= 100 || !clockEnabled)) {
+        render();
+        lastNumberRender = now;
+        pendingNumberRender = false;
+      }
+      updateProgress();
+    } finally {
+      clockUpdateInProgress = false;
+    }
+  }
+  // 公式框点击 = 当前时刻进度增加 T/5，相当于额外推进 0.2 秒。
+  // 自然完成一个时刻就立刻执行公式，不是直接增加 x₁。
+  function tapFormula() {
+    if (!clockEnabled) return;
+    updateClock();
+    progress += effectiveTime() / 5;
+    resyncProgressMotion();
+    const steps = Math.floor(progress);
+    if (steps >= 1 && Number.isSafeInteger(steps)) {
+      progress -= steps;
+      const executed = advanceAndCheckStory(steps);
+      if (executed < steps) progress = 0;
+      render();
+    }
+    updateProgress();
+  }
+  const formulaPanel = $('formula-panel');
+  const waveContent = $('formula-wave-content');
+  const waveMapElement = $('formula-wave-map');
+  const waves = [];
+  const waveDuration = 3000; // 从触点扩散到最远角落所需时间，与上一版相同。
+  const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+  const waveCanvas = document.createElement('canvas');
+  const waveContext = waveCanvas.getContext('2d', { alpha: false });
+  // 光影与同一批波共用位置、半径与生命周期，不额外生成波纹或定时器。
+  const lightCanvas = document.createElement('canvas');
+  lightCanvas.className = 'formula-wave-light';
+  lightCanvas.setAttribute('aria-hidden', 'true');
+  formulaPanel.appendChild(lightCanvas);
+  const lightContext = lightCanvas.getContext('2d', { alpha: true });
+  let lightScale = 1;
+  function resizeLightCanvas() {
+    if (!lightContext) return;
+    const rect = formulaPanel.getBoundingClientRect();
+    const scale = Math.min(window.devicePixelRatio || 1, 2);
+    const width = Math.max(1, Math.round(rect.width * scale));
+    const height = Math.max(1, Math.round(rect.height * scale));
+    if (width !== lightCanvas.width || height !== lightCanvas.height || scale !== lightScale) {
+      lightCanvas.width = width;
+      lightCanvas.height = height;
+      lightScale = scale;
+      lightContext.setTransform(scale, 0, 0, scale, 0, 0);
+    }
+  }
+  function clearWaveLight() {
+    if (!lightContext) return;
+    lightContext.clearRect(0, 0, lightCanvas.width / lightScale, lightCanvas.height / lightScale);
+  }
+  function renderWaveLight(now) {
+    if (!lightContext || !waveBox) return;
+    resizeLightCanvas();
+    clearWaveLight();
+    const panelRect = formulaPanel.getBoundingClientRect();
+    const offsetX = waveBox.left - panelRect.left;
+    const offsetY = waveBox.top - panelRect.top;
+    const lightMode = document.body.dataset.theme === 'light';
+    const width = panelRect.width;
+    const height = panelRect.height;
+    lightContext.save();
+    // 两条相邻细线模拟折射波前的明暗侧边，透明度很低，不盖住公式。
+    for (const wave of waves) {
+      const age = Math.max(0, Math.min(1, (now - wave.start) / waveDuration));
+      const fade = Math.min(1, age * 12, (1 - age) * 12);
+      if (fade <= 0) continue;
+      const radius = age * wave.maxRadius;
+      const cx = wave.x + offsetX;
+      const cy = wave.y + offsetY;
+      if (cx + radius + 4 < 0 || cx - radius - 4 > width ||
+          cy + radius + 4 < 0 || cy - radius - 4 > height) continue;
+      // 向外的明边与向内的暗边形成微小的凹凸视觉；多波可自然叠加。
+      lightContext.beginPath();
+      lightContext.arc(cx, cy, Math.max(0.1, radius + 1.6), 0, Math.PI * 2);
+      lightContext.strokeStyle = lightMode
+        ? `rgba(12, 32, 52, ${(.14 * fade).toFixed(3)})`
+        : `rgba(178, 222, 238, ${(.22 * fade).toFixed(3)})`;
+      lightContext.lineWidth = 1.35;
+      lightContext.stroke();
+      lightContext.beginPath();
+      lightContext.arc(cx, cy, Math.max(0.1, radius - 2.0), 0, Math.PI * 2);
+      lightContext.strokeStyle = lightMode
+        ? `rgba(255, 255, 255, ${(.27 * fade).toFixed(3)})`
+        : `rgba(5, 15, 27, ${(.27 * fade).toFixed(3)})`;
+      lightContext.lineWidth = 2.1;
+      lightContext.stroke();
+    }
+    lightContext.restore();
+  }
+  const waveResolution = 0.72; // 低分辨率位移场经滤镜插值，减少安卓设备逐帧开销。
+  const waveDisplacementScale = 16;
+  const waveBandHalfWidth = 12; // 影响范围非常窄，波后与波内均恢复原始像素。
+  const waveMapPadding = 16; // 让位移场覆盖内容边缘，避免边缘透明像素产生假影。
+  let waveGeometryDirty = true;
+  let waveBox = null;
+  let waveImage = null;
+  let waveNeutral = null;
+  let waveDx = null;
+  let waveDy = null;
+  let waveLastPaint = -Infinity;
+  const waveFrameMs = 40; // 位移贴图最多约 25 帧每秒，游戏进度条仍由浏览器独立绘制。
+
+  function prepareWaveMap() {
+    const rect = waveContent.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1 || !waveContext) return false;
+    const w = Math.ceil((rect.width + waveMapPadding * 2) * waveResolution);
+    const h = Math.ceil((rect.height + waveMapPadding * 2) * waveResolution);
+    if (waveGeometryDirty || !waveBox || waveCanvas.width !== w || waveCanvas.height !== h) {
+      waveBox = rect;
+      waveCanvas.width = w;
+      waveCanvas.height = h;
+      waveImage = waveContext.createImageData(w, h);
+      const length = w * h;
+      waveNeutral = new Uint8ClampedArray(length * 4);
+      for (let i = 0; i < waveNeutral.length; i += 4) {
+        waveNeutral[i] = 128;
+        waveNeutral[i + 1] = 128;
+        waveNeutral[i + 2] = 128;
+        waveNeutral[i + 3] = 255;
+      }
+      waveDx = new Float32Array(length);
+      waveDy = new Float32Array(length);
+      // feImage 在 SVG 过滤器的本地坐标空间中使用 CSS 像素而非缩小后的像素。
+      waveMapElement.setAttribute('x', String(-waveMapPadding));
+      waveMapElement.setAttribute('y', String(-waveMapPadding));
+      waveMapElement.setAttribute('width', String(rect.width + waveMapPadding * 2));
+      waveMapElement.setAttribute('height', String(rect.height + waveMapPadding * 2));
+      waveGeometryDirty = false;
+    }
+    return true;
+  }
+  function stopWaveField() {
+    waves.length = 0;
+    waveContent.classList.remove('is-distorted');
+    clearWaveLight();
+    // 移除滤镜后原始 DOM 保持原样，不留下字符偏移或失效的动画状态。
+    waveLastPaint = -Infinity;
+  }
+  function showTapPulse(event) {
+    if ((reducedMotion && reducedMotion.matches) || !prepareWaveMap()) return;
+    const rect = waveBox;
+    const x = event && typeof event.clientX === 'number' ? event.clientX - rect.left : rect.width / 2;
+    const y = event && typeof event.clientY === 'number' ? event.clientY - rect.top : rect.height / 2;
+    const farthestRadius = Math.max(
+      Math.hypot(x, y), Math.hypot(rect.width - x, y),
+      Math.hypot(x, rect.height - y), Math.hypot(rect.width - x, rect.height - y)
+    ) + waveBandHalfWidth;
+    waves.push({
+      x, y, start: performance.now(), maxRadius: farthestRadius,
+      // 每次点击分别抽取强度，范围 0.5～1.25；不同波可以独立干涉。
+      strength: 0.5 + Math.random() * 0.75
+    });
+    // 每道波独立传播至最远边角；不因后来点击而删除仍在扩散的波。
+    waveLastPaint = -Infinity;
+  }
+  function updateWaveField(now) {
+    if (!waves.length) return;
+    if (route !== 'formulas' || document.hidden || (reducedMotion && reducedMotion.matches)) {
+      stopWaveField();
+      return;
+    }
+    for (let i = waves.length - 1; i >= 0; i--) {
+      if (now - waves[i].start >= waveDuration) waves.splice(i, 1);
+    }
+    if (!waves.length) { stopWaveField(); return; }
+    if (!prepareWaveMap() || now - waveLastPaint < waveFrameMs) return;
+    waveLastPaint = now;
+    const { width: w, height: h } = waveCanvas;
+    const data = waveImage.data;
+    data.set(waveNeutral);
+    waveDx.fill(0);
+    waveDy.fill(0);
+    const pxWidth = (waveBox.width + waveMapPadding * 2) / w;
+    const pxHeight = (waveBox.height + waveMapPadding * 2) / h;
+    for (const wave of waves) {
+      const age = Math.min(1, (now - wave.start) / waveDuration);
+      const radius = age * wave.maxRadius;
+      const envelopeFade = Math.min(1, age * 12, (1 - age) * 12);
+      if (envelopeFade <= 0) continue;
+      const extent = radius + waveBandHalfWidth;
+      const x0 = Math.max(0, Math.floor((wave.x + waveMapPadding - extent) / pxWidth));
+      const x1 = Math.min(w - 1, Math.ceil((wave.x + waveMapPadding + extent) / pxWidth));
+      const y0 = Math.max(0, Math.floor((wave.y + waveMapPadding - extent) / pxHeight));
+      const y1 = Math.min(h - 1, Math.ceil((wave.y + waveMapPadding + extent) / pxHeight));
+      // 仅遍历环形波带中的两小段像素，而不是扫描整个圆的外接矩形。
+      // 波纹数量没有上限时，这能显著减少密集点击的 CPU 消耗。
+      const outerRadius = radius + waveBandHalfWidth;
+      const innerRadius = Math.max(0, radius - waveBandHalfWidth);
+      for (let py = y0; py <= y1; py++) {
+        const dy = (py + .5) * pxHeight - waveMapPadding - wave.y;
+        if (Math.abs(dy) > outerRadius) continue;
+        const outerX = Math.sqrt(Math.max(0, outerRadius * outerRadius - dy * dy));
+        const hasInnerGap = innerRadius > 0 && Math.abs(dy) < innerRadius;
+        const innerX = hasInnerGap
+          ? Math.sqrt(Math.max(0, innerRadius * innerRadius - dy * dy)) : 0;
+        const spans = hasInnerGap
+          ? [[-outerX, -innerX], [innerX, outerX]]
+          : [[-outerX, outerX]];
+        const row = py * w;
+        for (const [left, right] of spans) {
+          const startX = Math.max(x0, Math.ceil((wave.x + waveMapPadding + left) / pxWidth - .5));
+          const endX = Math.min(x1, Math.floor((wave.x + waveMapPadding + right) / pxWidth - .5));
+          for (let px = startX; px <= endX; px++) {
+            const dx = (px + .5) * pxWidth - waveMapPadding - wave.x;
+            const distance = Math.hypot(dx, dy);
+            const delta = distance - radius;
+            if (Math.abs(delta) > waveBandHalfWidth || distance < .0001) continue;
+            const ang = Math.atan2(dy, dx);
+            const envelope = Math.exp(-.5 * Math.pow(delta / 5.0, 2)) * envelopeFade;
+            // 基础强度略微减弱，再乘以每道波独立的随机强度。
+            const strength = 0.86 * wave.strength;
+            const radial = 3.8 * strength * envelope * Math.sin(delta * .54 + ang * 7);
+            const tangent = 1.6 * strength * envelope * Math.cos(delta * .57 - ang * 6);
+            const nx = dx / distance;
+            const ny = dy / distance;
+            const index = row + px;
+            // 多波直接叠加位移场，相交时既可加强也可抵消。
+            waveDx[index] += nx * radial - ny * tangent;
+            waveDy[index] += ny * radial + nx * tangent;
+          }
+        }
+      }
+    }
+    const gain = 255 / waveDisplacementScale;
+    for (let i = 0, j = 0; i < waveDx.length; i++, j += 4) {
+      const dx = Math.max(-6, Math.min(6, waveDx[i]));
+      const dy = Math.max(-6, Math.min(6, waveDy[i]));
+      data[j] = Math.max(0, Math.min(255, Math.round(128 + dx * gain)));
+      data[j + 1] = Math.max(0, Math.min(255, Math.round(128 + dy * gain)));
+    }
+    waveContext.putImageData(waveImage, 0, 0);
+    // SVG feDisplacementMap 修改 SourceGraphic 的实际像素，包含数学字体和时刻条。
+    // 不采用移动字形或整块卡片的 transform，也不会改变内部游戏数值。
+    waveMapElement.setAttribute('href', waveCanvas.toDataURL('image/png'));
+    waveContent.classList.add('is-distorted');
+    renderWaveLight(now);
+  }
+  window.addEventListener('resize', () => { waveGeometryDirty = true; });
+  formulaPanel.addEventListener('click', event => {
+    if (!clockEnabled) return;
+    showTapPulse(event);
+    tapFormula();
+  });
+  formulaPanel.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    if (!clockEnabled) return;
+    showTapPulse(null);
+    tapFormula();
+  });
+  let lastStoryCheck = 0;
+  function frame() {
+    // 剧情首次播放期间既不运行公式，也不执行每帧的计时和条件复查。
+    if (clockEnabled) {
+      updateClock();
+      const now = performance.now();
+      if (clockEnabled && now - lastStoryCheck > 500) {
+        lastStoryCheck = now;
+        unlockEligibleStories();
+      }
+    }
+    if (waves.length) updateWaveField(performance.now());
+    requestAnimationFrame(frame);
+  }
+  // 节流场景用间隔补算，和动画帧共享时间戳，不会重复记账。
+  requestAnimationFrame(frame);
+  document.addEventListener('visibilitychange', () => {
+    updateClock();
+    resyncProgressMotion();
+    updateProgress();
+    if (!document.hidden && pendingNumberRender) { render(); pendingNumberRender = false; lastNumberRender = performance.now(); }
+    if (document.hidden) game.flushPeak(true);
+    if (document.hidden) cancelStoryTimer();
+    else if (storyPlaying) scheduleStoryLine();
+  });
+
+  // 安卓长按文本与问号时禁止系统选区、放大镜和复制菜单。
+  // 不阻止 pointer/touch 事件：长按查看公式、剧情树拖动和点击仍正常。
+  const appShell = document.querySelector('.app-shell');
+  if (appShell) {
+    appShell.addEventListener('selectstart', event => {
+      if (!event.target.closest('input, textarea, [contenteditable="true"]')) event.preventDefault();
+    });
+    appShell.addEventListener('contextmenu', event => {
+      if (!event.target.closest('input, textarea, [contenteditable="true"]')) event.preventDefault();
+    });
+    appShell.addEventListener('dragstart', event => event.preventDefault());
+  }
+
+  document.addEventListener('click', event => {
+    const button = event.target.closest('button');
+    if (!button) return;
+    if (button.dataset.route) { navigate(button.dataset.route); return; }
+    if (button.dataset.metaTab) { selectMetaTab(button.dataset.metaTab); return; }
+    if (button.dataset.settingsTab) { selectSettingsTab(button.dataset.settingsTab); return; }
+    if (button.id === 'developer-mode-toggle') { activateDeveloperModeFromEntry(); return; }
+    if (button.id === 'developer-password-submit') {
+      $('developer-password-feedback').textContent = '密码错误';
+      $('developer-password-input').value = '';
+      return;
+    }
+    if (button.id === 'developer-speed-toggle') { setDeveloperOption('speed10'); return; }
+    if (button.id === 'developer-pgain-toggle') { setDeveloperOption('pGain10'); return; }
+    if (button.id === 'developer-details-toggle') { setDeveloperOption('details'); return; }
+    if (button.dataset.formulaNode) { openMetaFormula(Number(button.dataset.formulaNode)); return; }
+    if (button.id === 'meta-formula-action') { goToInspectedFormula(); return; }
+    if (button.id === 'close-meta-formula') { closeAnimatedDialog('meta-formula-dialog'); return; }
+    if (button.dataset.storyId && button.classList.contains('story-tree-node')) {
+      openStoryInfo(Number(button.dataset.storyId)); return;
+    }
+    if (button.id === 'cancel-story') { hideStoryInfo(); return; }
+    if (button.id === 'replay-story') {
+      const id = Number(button.dataset.storyId);
+      hideStoryInfo(() => startStory(id));
+      return;
+    }
+    if (button.id === 'meta-help') {
+      const ids = game.state.ownedIds;
+      $('psi-equation').textContent = 'Ψ = ' + ids.map(id => 'x' + String.fromCharCode(...String(id).split('').map(d => 0x2080 + Number(d)))).join(' × ');
+      openAnimatedDialog('meta-help-dialog');
+      return;
+    }
+    if (button.id === 'close-meta-help') { closeAnimatedDialog('meta-help-dialog'); return; }
+    if (button.id === 'open-reset') { openAnimatedDialog('reset-dialog'); return; }
+    if (button.id === 'cancel-reset') { closeAnimatedDialog('reset-dialog'); return; }
+    if (button.id === 'confirm-reset') {
+      closeAnimatedDialog('reset-dialog', () => {
+      // 同步彻底重置内存与浏览器记录：避免 reload 与后备流程互相竞争。
+      clockEnabled = false;
+      clearStoryPlayback();
+      game.reset();
+      clearStoredGameProgress();
+      unlocked = new Set([1]);
+      seen = new Set();
+      improveUnlocked = false;
+      metaUnlocked = false;
+      visitedFormula2 = false;
+      visitedFormula3 = false;
+      formulaTwoImproveUnlocked = false;
+      formulaThreeImproveUnlocked = false;
+      developer = { enabled: false, speed10: false, pGain10: false, details: false };
+      clearDeveloperPasswordUI();
+      game.setPGainMultiplier(1);
+      introCompleted = false;
+      progress = 0;
+      lastTime = performance.now();
+      lastStoryCheck = 0;
+      resyncProgressMotion();
+      route = 'settings';
+      navigate('formulas');
+      selectMetaTab('unlock');
+      selectSettingsTab('general');
+      renderDeveloperOptions();
+      updateImprovePage();
+      updateMetaPage();
+      updateTree();
+      render();
+      updateProgress();
+      if (firstStory) startStory(1, true);
+      else { introCompleted = true; clockEnabled = true; }
+      });
+      return;
+    }
+    if (button.dataset.themeChoice) {
+      theme = button.dataset.themeChoice;
+      storageSet('formula-lab-ui-theme', theme);
+      applyTheme();
+      return;
+    }
+    if (button.id === 'improve-action' && improveUnlocked && (game.state.activeId === 1 ? game.improveFormulaOne() : game.state.activeId === 2 ? formulaTwoImproveUnlocked && game.improveFormulaTwo() : game.state.activeId === 3 && formulaThreeImproveUnlocked && game.improveFormulaThree())) {
+      // 改进不重置剧情、改进解锁或已获得的 p₁，只重置公式 1 的升级与 x₁。
+      // 首次改进永久解锁剧情 3，并直接自动播放。
+      if (game.state.activeId === 1 && !unlocked.has(3)) unlocked.add(3);
+      if (game.state.activeId === 2 && !unlocked.has(9)) unlocked.add(9);
+      if (game.state.activeId === 3 && !unlocked.has(11)) unlocked.add(11);
+      updateTree();
+      progress = 0;
+      lastTime = performance.now();
+      resyncProgressMotion();
+    updateProgress();
+      render();
+      tryAutoplayStory();
+      return;
+    }
+    if (button.id === 'buy-a' && game.buy('a')) { render(); unlockEligibleStories(); }
+    if (button.id === 'buy-time' && game.buy('time')) render();
+    if (button.id === 'buy-b' && (game.state.activeId === 3 ? game.buyC() : game.buyB())) { render(); unlockEligibleStories(); }
+    if (button.id === 'buy-b-three' && game.buyFormulaThreeB()) { render(); unlockEligibleStories(); }
+  });
+
+  // 剧情介绍也允许点击遮罩取消，延续现有的淡出动画。
+  storyInfoDialog.addEventListener('click', event => {
+    if (event.target !== storyInfoDialog) return;
+    const box = storyInfoDialog.getBoundingClientRect();
+    if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom)
+      hideStoryInfo();
+  });
+
+  // 密码框的回车与“确认”按钮一致；入口解锁只由连续七次点击触发。
+  $('developer-password-input').addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      $('developer-password-submit').click();
+    }
+  });
+  window.addEventListener('pagehide', () => game.flushPeak(true));
+  applyTheme();
+  renderDeveloperOptions();
+  selectMetaTab('unlock');
+  selectSettingsTab('general');
+  updateImprovePage();
+  updateMetaPage();
+  unlockEligibleStories();
+  updateTree();
+  render();
+  updateProgress();
+  // 计时器已创建，但在初始剧情 1 完全结束前保持禁用。
+  if (firstStory) startStory(firstStory.id, true);
+  else {
+    storyOverlay.hidden = true;
+    document.documentElement.classList.remove('story-boot');
+    introCompleted = true;
+    clockEnabled = true;
+    lastTime = performance.now();
+    tryAutoplayStory();
+  }
+})();
+
+
+}
+</script>
+</body>
+</html>
