@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN" class="story-boot">
+<html lang="zh-CN" class="story-boot official-path-blocked">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -14,58 +14,113 @@
   <script>
   (() => {
     'use strict';
-    const OFFICIAL_ORIGIN = 'https://starseacolin.github.io';
-    const LAUNCH_KEY = 'formula_lab_launch_v1';
-    const SESSION_KEY = 'formula_lab_session_v1';
-    const TICKET_LIFETIME_MS = 5 * 60 * 1000;
-    const GAME_PATH = '/Formula-Game/';
+    // 公式增量官方入口：首次必须从 /Oll/ 按钮跳转，刷新只允许原浏览记录。
+    // GitHub Pages 为纯静态托管：此校验无法防御主动修改页面脚本的攻击者。
+    const ORIGIN = 'https://starseacolin.github.io';
+    const HOME = '/Oll/';
+    const GAME = '/Formula-Game/';
+    const PENDING_KEY = 'formula_lab_pending_v2';
+    const ACTIVE_KEY = 'formula_lab_active_v2';
+    const STATE_KEY = '__formula_lab_entry_v2';
+    const HASH_PREFIX = '#formula_launch=';
+    const MAX_AGE = 90 * 1000;
+    const html = document.documentElement;
+    let authorized = false;
 
-    function normalizeGamePath(pathname) {
-      // 仅允许“公式研究”仓库的 Pages 路径；仓库名必须与 GitHub 完全一致。
-      return (pathname === GAME_PATH || pathname === GAME_PATH + 'index.html')
-        ? GAME_PATH : null;
-    }
-    function parseRecord(value) {
-      if (!value) return null;
-      try { return JSON.parse(value); } catch (_) { return null; }
-    }
-    function validRecord(record, targetPath) {
-      return !!record && record.version === 1 &&
-        record.state === 'authorized' && record.issuerPath === '/Oll/' &&
-        record.targetPath === targetPath;
-    }
+    const correctPath = path => path === GAME || path === GAME + 'index.html';
+    const validToken = token => typeof token === 'string' && /^[a-f0-9]{64}$/.test(token);
+    const readJSON = key => {
+      try { return JSON.parse(sessionStorage.getItem(key) || 'null'); }
+      catch (_) { return null; }
+    };
+    const navigationType = () => {
+      try {
+        const nav = performance.getEntriesByType('navigation')[0];
+        if (nav && typeof nav.type === 'string') return nav.type;
+        // 兼容仍支持旧式 PerformanceNavigation 的浏览器。
+        if (performance.navigation) {
+          return ['navigate', 'reload', 'back_forward'][performance.navigation.type] || '';
+        }
+      } catch (_) {}
+      return '';
+    };
+    const officialReferrer = () => {
+      try {
+        const ref = new URL(document.referrer);
+        return ref.origin === ORIGIN &&
+          (ref.pathname === HOME || ref.pathname === HOME + 'index.html');
+      } catch (_) { return false; }
+    };
+    const standalone = () => {
+      try { return window.top === window.self; }
+      catch (_) { return false; }
+    };
+    const historyToken = () => {
+      try { return history.state && history.state[STATE_KEY]; }
+      catch (_) { return null; }
+    };
+    const validRefresh = () => {
+      const active = readJSON(ACTIVE_KEY);
+      return Boolean(active && active.v === 2 && active.target === GAME &&
+        validToken(active.token) && active.token === historyToken());
+    };
+    const validLocation = () => location.origin === ORIGIN &&
+      correctPath(location.pathname) && standalone();
 
-    let allowed = false;
     try {
-      const targetPath = normalizeGamePath(location.pathname);
-      if (location.origin === OFFICIAL_ORIGIN && targetPath) {
-        const session = parseRecord(sessionStorage.getItem(SESSION_KEY));
-        if (validRecord(session, targetPath)) {
-          // 同一标签页已成功从启动页进入，允许刷新。
-          allowed = true;
-        } else {
-          const ticket = parseRecord(sessionStorage.getItem(LAUNCH_KEY));
-          const age = Date.now() - Number(ticket && ticket.issuedAt);
-          if (validRecord(ticket, targetPath) && Number.isFinite(age) &&
-              age >= 0 && age <= TICKET_LIFETIME_MS) {
-            allowed = true;
-            sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-              version: 1, state: 'authorized', issuerPath: '/Oll/',
-              targetPath: targetPath
+      if (validLocation()) {
+        const mode = navigationType();
+        if (mode === 'reload') {
+          // 新标签或重新手动导航属于 navigate，不能借用旧的会话记录。
+          authorized = validRefresh();
+        } else if (mode === 'navigate' && officialReferrer()) {
+          const token = location.hash.startsWith(HASH_PREFIX)
+            ? location.hash.slice(HASH_PREFIX.length) : '';
+          const pending = readJSON(PENDING_KEY);
+          const now = Date.now();
+          const age = pending ? now - pending.created : NaN;
+          if (validToken(token) && pending && pending.v === 2 &&
+              pending.target === GAME && pending.token === token &&
+              Number.isFinite(pending.created) && Number.isFinite(age) &&
+              age >= 0 && age <= MAX_AGE) {
+            // 使用后销毁一次性凭证；刷新权限绑定到当前 History Entry。
+            sessionStorage.removeItem(PENDING_KEY);
+            sessionStorage.setItem(ACTIVE_KEY, JSON.stringify({
+              v: 2, target: GAME, token
             }));
-            sessionStorage.removeItem(LAUNCH_KEY);
+            const oldState = history.state;
+            const newState = oldState && typeof oldState === 'object' &&
+              !Array.isArray(oldState) ? { ...oldState } : {};
+            newState[STATE_KEY] = token;
+            // 令用户复制到的游戏链接不含一次性授权凭证。
+            history.replaceState(newState, '', location.pathname + location.search);
+            authorized = validRefresh();
           }
         }
       }
     } catch (_) {
-      // 无法读取会话存储时不启动游戏，避免绕过授权检查。
-      allowed = false;
+      authorized = false; // 存储/History API 失败时一律拒绝运行。
+      try { sessionStorage.removeItem(ACTIVE_KEY); } catch (_) {}
     }
 
+    // HTML 初始即被 CSS 阻止显示，只有校验通过才解除。
+    if (authorized) html.classList.remove('official-path-blocked');
+    else html.classList.add('official-path-blocked');
+
     Object.defineProperty(window, '__FORMULALAB_OFFICIAL_ALLOWED__', {
-      value: allowed, writable: false, configurable: false
+      get() { return authorized; }, configurable: false
     });
-    if (!allowed) document.documentElement.classList.add('official-path-blocked');
+
+    // BFCache 返回并非刷新：主动撤销权限，阻止通过历史记录返回游戏。
+    window.addEventListener('pageshow', event => {
+      if (!event.persisted) return;
+      authorized = false;
+      html.classList.add('official-path-blocked');
+      try { sessionStorage.removeItem(ACTIVE_KEY); } catch (_) {}
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+      // 重新载入后导航类型为 reload；因票据已清除，仍只显示提示。
+      location.reload();
+    });
   })();
   </script>
   <style>
